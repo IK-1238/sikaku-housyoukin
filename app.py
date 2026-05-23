@@ -46,6 +46,14 @@ if "show_acquired" not in st.session_state:
 if "show_superior" not in st.session_state:
     st.session_state.show_superior = True
 
+# 絞り込み条件（ボタン押下で確定する用）
+if "applied_keyword" not in st.session_state:
+    st.session_state.applied_keyword = ""
+if "applied_ranks" not in st.session_state:
+    st.session_state.applied_ranks = []
+if "applied_kubun" not in st.session_state:
+    st.session_state.applied_kubun = []
+
 
 def reset_login_state(clear_data: bool = False):
     st.session_state.authenticated = False
@@ -95,15 +103,17 @@ st.markdown(
         line-height: 1.5;
     }
 
-    /* 通常ボタンを薄い青色に統一（ログアウトは下で個別指定） */
+    /* 通常ボタンを薄い青色に統一＆スマホ横並びしやすい幅に調整 */
     .stButton > button {
         white-space: nowrap;
         font-size: 0.9rem;
-        padding: 0.25rem 0.6rem;
+        padding: 0.3rem 0.4rem;      /* 少しコンパクトに */
         background-color: #e3f2fd;   /* かなり薄い青色 */
         color: #0d47a1;
         border: 1px solid #90caf9;
         border-radius: 0.35rem;
+        width: 100%;                 /* カラム幅いっぱいに */
+        box-sizing: border-box;      /* はみ出さないように */
     }
     .stButton > button:hover {
         background-color: #bbdefb;
@@ -125,44 +135,16 @@ st.markdown(
         color: #555555;
         margin-bottom: 0.1rem;
     }
-
-    /* タイトルの行に置くログアウトボタン専用（小さめ・薄いグレー） */
-    .logout-wrapper .stButton > button {
-        background-color: #f5f5f5;   /* 薄いグレー */
-        color: #424242;
-        border: 1px solid #bdbdbd;
-        font-size: 0.70rem;          /* 小さめ */
-        padding: 0.10rem 0.45rem;
-        border-radius: 0.3rem;
-    }
-    .logout-wrapper .stButton > button:hover {
-        background-color: #e0e0e0;
-        border-color: #9e9e9e;
-        color: #212121;
-    }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-# ====== タイトル行（左：タイトル、右：ログアウトボタン） ======
-header_col1, header_col2 = st.columns([8, 2])
-
-with header_col1:
-    # st.title の代わりに h1 を直接書くことで同じ行にレイアウト
-    st.markdown(
-        "<h1>資格報奨金</h1>",
-        unsafe_allow_html=True
-    )
-
-with header_col2:
-    # ログイン済みのときだけ右側にログアウトボタン
-    if st.session_state.authenticated:
-        st.markdown('<div class="logout-wrapper" style="text-align:right;">', unsafe_allow_html=True)
-        if st.button("ログアウト", key="logout_button"):
-            reset_login_state(clear_data=False)
-            st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
+# ====== タイトル ======================================
+st.markdown(
+    "<h1>資格報奨金 管理アプリ（Streamlit 版）</h1>",
+    unsafe_allow_html=True
+)
 
 # ==== アプリ名のすぐ下に、タブ表示オン/オフ用チェックボックス ====
 if st.session_state.authenticated:
@@ -233,15 +215,16 @@ for rec in records:
     else:
         remaining_records.append(rec)
 
-# ---- サイドバー（検索UI） ----
+# ---- サイドバー（検索UI + 絞り込みボタン + ログアウト） ----
 st.sidebar.header("検索・フィルタ")
 
 # ① フリーワード
 st.sidebar.subheader("フリーワード検索")
-keyword = st.sidebar.text_input(
+keyword_input = st.sidebar.text_input(
     "キーワード",
-    value="",
-    placeholder="例）IT パスポート, 技術士 など"
+    value=st.session_state.applied_keyword,  # 直近の適用条件を初期値に
+    placeholder="例）IT パスポート, 技術士 など",
+    key="kw_input"
 )
 st.sidebar.caption("※ 資格名・ランク・区分・金額から部分一致で検索します。")
 
@@ -250,17 +233,55 @@ st.sidebar.markdown("---")
 # ② ランク／区分（複数選択・未選択なら全件）
 st.sidebar.subheader("詳細条件")
 
-selected_ranks = st.sidebar.multiselect(
+selected_ranks_input = st.sidebar.multiselect(
     "ランクを選択（複数可・未選択なら全件）",
     options=rank_list,
-    default=[],
+    default=st.session_state.applied_ranks,
+    key="rank_multi",
 )
 
-selected_kubun = st.sidebar.multiselect(
+selected_kubun_input = st.sidebar.multiselect(
     "区分を選択（複数可・未選択なら全件）",
     options=kubun_list,
-    default=[],
+    default=st.session_state.applied_kubun,
+    key="kubun_multi",
 )
+
+# === 絞り込みボタン & 絞り込み解除ボタン（サイドタブの下） ===
+btn_col1, btn_col2 = st.sidebar.columns(2)
+with btn_col1:
+    if st.button("絞り込み", key="do_filter_sidebar"):
+        # 現在の入力値を「適用済み条件」として保存
+        st.session_state.applied_keyword = st.session_state.kw_input
+        st.session_state.applied_ranks = st.session_state.rank_multi
+        st.session_state.applied_kubun = st.session_state.kubun_multi
+        st.rerun()
+
+with btn_col2:
+    if st.button("絞り込み解除", key="clear_filter_sidebar"):
+        # 条件リセット
+        st.session_state.applied_keyword = ""
+        st.session_state.applied_ranks = []
+        st.session_state.applied_kubun = []
+        # 入力欄もリセット
+        st.session_state.kw_input = ""
+        st.session_state.rank_multi = []
+        st.session_state.kubun_multi = []
+        st.rerun()
+
+st.sidebar.markdown("---")
+
+# === ログアウトボタン（絞り込みボタン群のさらに下） ===
+if st.session_state.authenticated:
+    if st.sidebar.button("ログアウト", key="logout_sidebar"):
+        reset_login_state(clear_data=False)
+        st.rerun()
+
+
+# ===== 実際に使う絞り込み条件は「適用済み」の値 =====
+applied_keyword = st.session_state.applied_keyword
+applied_ranks = st.session_state.applied_ranks
+applied_kubun = st.session_state.applied_kubun
 
 
 def match_freeword(rec: dict, keyword: str) -> bool:
@@ -284,17 +305,17 @@ def filter_records(rec_list):
         kubun_val = str(r.get("区分", ""))
 
         # ランク絞り込み（選択があるときのみ有効）
-        if selected_ranks:
-            if rank_val not in map(str, selected_ranks):
+        if applied_ranks:
+            if rank_val not in map(str, applied_ranks):
                 continue
 
         # 区分絞り込み（選択があるときのみ有効）
-        if selected_kubun:
-            if kubun_val not in map(str, selected_kubun):
+        if applied_kubun:
+            if kubun_val not in map(str, applied_kubun):
                 continue
 
         # フリーワード
-        if not match_freeword(r, keyword):
+        if not match_freeword(r, applied_keyword):
             continue
 
         filtered.append(r)
@@ -335,8 +356,8 @@ if st.session_state.show_unacquired:
                     unsafe_allow_html=True
                 )
 
-                # 取得 / 上位互換 ボタンを横並び
-                btn_col1, btn_col2 = st.columns(2)
+                # 取得 / 上位互換 ボタンを横並び（スマホでも横並びになりやすいよう調整）
+                btn_col1, btn_col2 = st.columns(2, gap="small")
                 with btn_col1:
                     if st.button("取得", key=f"acquire_{idx}", use_container_width=True):
                         acquired_ids.add(idx)
@@ -359,10 +380,10 @@ if st.session_state.show_unacquired:
 #  取得済み（上位互換はまだ）
 # =========================================================
 if st.session_state.show_acquired:
-    st.subheader("取得済みの資格")
+    st.subheader("取得済み（上位互換はまだ）の資格")
 
     if not acquired_records_filtered:
-        st.info("条件に合致する『取得済み』の資格はありません。")
+        st.info("条件に合致する『取得済み（上位互換はまだ）』の資格はありません。")
     else:
         for rec in acquired_records_filtered:
             idx = rec["id"]
@@ -384,7 +405,7 @@ if st.session_state.show_acquired:
                     unsafe_allow_html=True
                 )
 
-                btn_col1, btn_col2 = st.columns(2)
+                btn_col1, btn_col2 = st.columns(2, gap="small")
                 with btn_col1:
                     if st.button("取得解除", key=f"unacquire_{idx}", use_container_width=True):
                         if idx in acquired_ids:
