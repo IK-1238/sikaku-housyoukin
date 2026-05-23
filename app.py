@@ -96,6 +96,10 @@ if "applied_ranks" not in st.session_state:
 if "applied_kubun" not in st.session_state:
     st.session_state.applied_kubun = []
 
+# サイドバーのエクスパンダー開閉状態（初期は開く）
+if "filter_expanded" not in st.session_state:
+    st.session_state.filter_expanded = True
+
 
 def reset_login_state(clear_data: bool = False):
     st.session_state.authenticated = False
@@ -275,59 +279,61 @@ for rec in records:
         remaining_records.append(rec)
 
 # ---- サイドバー（検索UI + 絞り込みボタン + ログアウト） ----
-st.sidebar.header("検索・フィルタ")
+# ここをエクスパンダーで囲み、絞り込みボタンで開閉を制御する
+with st.sidebar.expander("検索・フィルタ", expanded=st.session_state.filter_expanded):
+    st.subheader("フリーワード検索")
+    keyword_input = st.text_input(
+        "キーワード",
+        value=st.session_state.applied_keyword,
+        placeholder="例）IT パスポート, 技術士 など",
+        key="kw_input"
+    )
+    st.caption("※ 資格名・ランク・区分・金額から部分一致で検索します。")
 
-# ① フリーワード
-st.sidebar.subheader("フリーワード検索")
-keyword_input = st.sidebar.text_input(
-    "キーワード",
-    value=st.session_state.applied_keyword,
-    placeholder="例）IT パスポート, 技術士 など",
-    key="kw_input"
-)
-st.sidebar.caption("※ 資格名・ランク・区分・金額から部分一致で検索します。")
+    st.markdown("---")
 
+    st.subheader("詳細条件")
+
+    selected_ranks_input = st.multiselect(
+        "ランクを選択（複数可・未選択なら全件）",
+        options=rank_list,
+        default=st.session_state.applied_ranks,
+        key="rank_multi",
+    )
+
+    selected_kubun_input = st.multiselect(
+        "区分を選択（複数可・未選択なら全件）",
+        options=kubun_list,
+        default=st.session_state.applied_kubun,
+        key="kubun_multi",
+    )
+
+    # === 絞り込みボタン & 絞り込み解除ボタン ===
+    btn_col1, btn_col2 = st.columns(2)
+    with btn_col1:
+        if st.button("絞り込み", key="do_filter_sidebar"):
+            # 入力中の値を「適用済み条件」として保存
+            st.session_state.applied_keyword = st.session_state.kw_input
+            st.session_state.applied_ranks = st.session_state.rank_multi
+            st.session_state.applied_kubun = st.session_state.kubun_multi
+            # 絞り込み後はエクスパンダーを閉じる
+            st.session_state.filter_expanded = False
+            st.rerun()
+
+    with btn_col2:
+        if st.button("絞り込み解除", key="clear_filter_sidebar"):
+            st.session_state.applied_keyword = ""
+            st.session_state.applied_ranks = []
+            st.session_state.applied_kubun = []
+            st.session_state.kw_input = ""
+            st.session_state.rank_multi = []
+            st.session_state.kubun_multi = []
+            # 条件解除時は再度エクスパンダーを開く
+            st.session_state.filter_expanded = True
+            st.rerun()
+
+# === ログアウトボタン（サイドバーの下に常時表示） ===
 st.sidebar.markdown("---")
-
-# ② ランク／区分（複数選択・未選択なら全件）
-st.sidebar.subheader("詳細条件")
-
-selected_ranks_input = st.sidebar.multiselect(
-    "ランクを選択（複数可・未選択なら全件）",
-    options=rank_list,
-    default=st.session_state.applied_ranks,
-    key="rank_multi",
-)
-
-selected_kubun_input = st.sidebar.multiselect(
-    "区分を選択（複数可・未選択なら全件）",
-    options=kubun_list,
-    default=st.session_state.applied_kubun,
-    key="kubun_multi",
-)
-
-# === 絞り込みボタン & 絞り込み解除ボタン ===
-btn_col1, btn_col2 = st.sidebar.columns(2)
-with btn_col1:
-    if st.button("絞り込み", key="do_filter_sidebar"):
-        st.session_state.applied_keyword = st.session_state.kw_input
-        st.session_state.applied_ranks = st.session_state.rank_multi
-        st.session_state.applied_kubun = st.session_state.kubun_multi
-        st.rerun()
-
-with btn_col2:
-    if st.button("絞り込み解除", key="clear_filter_sidebar"):
-        st.session_state.applied_keyword = ""
-        st.session_state.applied_ranks = []
-        st.session_state.applied_kubun = []
-        st.session_state.kw_input = ""
-        st.session_state.rank_multi = []
-        st.session_state.kubun_multi = []
-        st.rerun()
-
-st.sidebar.markdown("---")
-
-# === ログアウトボタン ===
 if st.session_state.authenticated:
     if st.sidebar.button("ログアウト", key="logout_sidebar"):
         reset_login_state(clear_data=False)
