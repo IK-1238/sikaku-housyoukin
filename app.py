@@ -95,7 +95,7 @@ st.markdown(
         line-height: 1.5;
     }
 
-    /* ボタンを薄い青色に統一（ログイン/取得系など） */
+    /* ボタンを薄い青色に統一（ログアウトは JS で個別調整） */
     .stButton > button {
         white-space: nowrap;
         font-size: 0.9rem;
@@ -175,15 +175,16 @@ if not st.session_state.authenticated:
     st.stop()
 
 # ---- ログイン後（右上に小さなログアウトボタン） ----
-top_col1, top_col2 = st.columns([8, 2])
+# タイトル直下の右上に配置
+top_col1, top_col2 = st.columns([9, 1])
 with top_col1:
-    st.write("")  # 空白（タイトルとの間隔用）
+    st.write("")  # タイトルとの間隔用
 with top_col2:
-    if st.button("ログアウト", use_container_width=True):
+    if st.button("ログアウト", use_container_width=True, key="logout_button"):
         reset_login_state(clear_data=False)
         st.rerun()
 
-# ログアウトボタンを「右上・小さめ・白塗り」にするための JS/CSS 調整
+# ログアウトボタンを「右上・小さめ・薄いグレー塗り」にするための JS/CSS 調整
 st.markdown(
     """
     <script>
@@ -191,11 +192,12 @@ st.markdown(
         const btns = window.parent.document.querySelectorAll('button');
         btns.forEach(b => {
             if (b.innerText === 'ログアウト') {
-                b.style.backgroundColor = 'white';
-                b.style.color = '#0d47a1';
-                b.style.border = '1px solid #90caf9';
-                b.style.fontSize = '0.75rem';
-                b.style.padding = '0.15rem 0.4rem';
+                b.style.backgroundColor = '#f5f5f5';   // 薄いグレー
+                b.style.color = '#424242';
+                b.style.border = '1px solid #bdbdbd';
+                b.style.fontSize = '0.70rem';
+                b.style.padding = '0.10rem 0.35rem';
+                b.style.borderRadius = '0.3rem';
             }
         });
     });
