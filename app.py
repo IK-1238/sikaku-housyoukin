@@ -61,7 +61,7 @@ st.set_page_config(
     layout="centered",
 )
 
-# ====== 全体 CSS（スマホ向け） =======================
+# ====== 全体 CSS（スマホ向け＋ログアウトボタン用） ====
 st.markdown(
     """
     <style>
@@ -95,7 +95,7 @@ st.markdown(
         line-height: 1.5;
     }
 
-    /* ボタンを薄い青色に統一（ログアウトは JS で個別調整） */
+    /* 通常ボタンを薄い青色に統一（ログアウトは下で個別指定） */
     .stButton > button {
         white-space: nowrap;
         font-size: 0.9rem;
@@ -126,32 +126,41 @@ st.markdown(
         margin-bottom: 0.1rem;
     }
 
-     /* ログアウトボタン用 */
+    /* ログアウトボタン用（右上固定・小さめ・薄いグレー） */
     .logout-area {
-        display: flex;
-        justify-content: flex-end;   /* 右寄せ */
-        margin-top: -2.5rem;         /* タイトルに近づけるための微調整（必要に応じて調整） */
-        margin-bottom: 0.5rem;
+        position: fixed;
+        top: 0.6rem;
+        right: 1.0rem;
+        z-index: 999;
     }
     .logout-area .stButton > button {
         background-color: #f5f5f5;   /* 薄いグレー */
         color: #424242;
         border: 1px solid #bdbdbd;
-        font-size: 0.7rem;           /* 小さめ */
-        padding: 0.1rem 0.5rem;
+        font-size: 0.70rem;          /* 小さめ */
+        padding: 0.10rem 0.45rem;
         border-radius: 0.3rem;
     }
     .logout-area .stButton > button:hover {
         background-color: #e0e0e0;
         border-color: #9e9e9e;
+        color: #212121;
     }
-    
     </style>
     """,
     unsafe_allow_html=True
 )
 
 st.title("資格報奨金 管理アプリ（Streamlit 版）")
+
+# ==== ログイン済みのときだけ、右上にログアウトボタンを表示 ====
+if st.session_state.authenticated:
+    with st.container():
+        st.markdown('<div class="logout-area">', unsafe_allow_html=True)
+        if st.button("ログアウト", key="logout_button"):
+            reset_login_state(clear_data=False)
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # ==== アプリ名のすぐ下に、タブ表示オン/オフ用チェックボックス ====
 if st.session_state.authenticated:
@@ -195,15 +204,6 @@ if not st.session_state.authenticated:
 
     st.stop()
 
-# ---- ログイン後（右上に小さなログアウトボタン） ----
-with st.container():
-    st.markdown('<div class="logout-area">', unsafe_allow_html=True)
-    if st.button("ログアウト", key="logout_button"):
-        reset_login_state(clear_data=False)
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-
-st.markdown("---")
 st.markdown("---")
 
 # ---- データ読込 ----
