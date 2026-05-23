@@ -2,21 +2,12 @@ import streamlit as st
 import pandas as pd
  
 # ==== 設定 ============================================
- 
-# Excel ファイルのパス
 EXCEL_PATH = "資格報奨金_まとめ.xlsx"
- 
-# ログイン用パスワード（必ず自分用に変更）
-PASSWORD = "SIyu0207ike&"   # 元コードと同じ値にしてください
- 
+PASSWORD = "SIyu0207ike&"
 # =====================================================
  
  
 def parse_money_to_man(yen_str: str) -> int:
-    """
-    '100万円' や '1万円' などから 数字部分だけを取り出して int 化
-    （現状では未使用ですが、今後金額計算に使う想定の関数）
-    """
     s = str(yen_str)
     s = s.replace("万円", "").replace("万", "").replace("円", "").replace(",", "")
     if s == "" or s.lower() == "nan":
@@ -25,63 +16,86 @@ def parse_money_to_man(yen_str: str) -> int:
  
  
 def load_data():
-    """
-    Excel からデータを読み込んで、必要な列を整形して返す
-    - Flask 版の load_data() に相当
-    """
     df = pd.read_excel(EXCEL_PATH)
- 
-    # Excel の列名を Python で使う列名にそろえる（Flask 版と同じ）
     df = df.rename(columns={
-        "資格名／種類": "資格名",  # 必要に応じてここを調整
-        # 他にも列名が微妙に違う場合はここに追加
-        # 例: "金額（円）": "金額"
+        "資格名／種類": "資格名",
     })
- 
-    # 行番号を ID として振る（Flask 版では enumerate の idx を ID にしていた）
     df = df.reset_index(drop=True)
     df["id"] = df.index
  
-    # ランク一覧
     rank_list = sorted(df["ランク"].dropna().unique())
-    # 区分一覧
     kubun_list = sorted(df["区分"].dropna().unique())
- 
     return df, rank_list, kubun_list
  
  
-# ====== Streamlit セッション状態の初期化 =========================
- 
+# ====== セッション状態初期化 =========================
 if "authenticated" not in st.session_state:
-    # パスワード認証済みかどうか
     st.session_state.authenticated = False
  
 if "acquired_ids" not in st.session_state:
-    # 取得済み資格の ID セット
     st.session_state.acquired_ids = set()
  
 if "superior_ids" not in st.session_state:
-    # 「上位互換を取得済み」とマークされた資格の ID セット
     st.session_state.superior_ids = set()
  
  
 def reset_login_state(clear_data: bool = False):
-    """
-    ログアウト時に状態をリセットするヘルパ
-    clear_data=True の場合は取得状況も消す
-    """
     st.session_state.authenticated = False
     if clear_data:
         st.session_state.acquired_ids = set()
         st.session_state.superior_ids = set()
  
  
-# ====== 画面構成 ==========================================
- 
-st.set_page_config(page_title="資格報奨金 管理アプリ", page_icon="✅", layout="wide")
+# ====== ページ設定（スマホ向けに中央寄せ）============
+st.set_page_config(
+    page_title="資格報奨金 管理アプリ",
+    page_icon="✅",
+    layout="centered",   # ← wide から centered に変更（スマホで見やすく）
+)
+
+# ====== 全体 CSS（スマホ向け） =======================
+st.markdown(
+    """
+    <style>
+    /* ベース文字サイズ少し大きめ */
+    html, body, [class*="css"]  {
+        font-size: 16px;
+    }
+
+    /* 資格カードの見た目調整 */
+    .qual-card {
+        padding: 0.6rem 0.8rem;
+        margin-bottom: 0.4rem;
+        border-radius: 0.4rem;
+        border: 1px solid #e0e0e0;
+        background-color: #ffffff;
+    }
+
+    /* ボタンを1行で表示（折り返さない） */
+    .stButton > button {
+        white-space: nowrap;
+        font-size: 0.9rem;
+        padding: 0.25rem 0.6rem;
+    }
+
+    /* セクション見出しの余白調整 */
+    h2, h3 {
+        margin-top: 0.8rem;
+        margin-bottom: 0.4rem;
+    }
+
+    /* サイドバーの文字サイズ調整 */
+    section[data-testid="stSidebar"] {
+        font-size: 14px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 st.title("資格報奨金 管理アプリ（Streamlit 版）")
  
-# ---- まだログインしていない場合は、パスワード画面だけを表示 ----
+# ---- ログイン画面 ----
 if not st.session_state.authenticated:
     st.markdown("### ログイン")
     st.write("パスワードを入力してください。")
@@ -89,37 +103,32 @@ if not st.session_state.authenticated:
  
     col_login1, col_login2 = st.columns([1, 3])
     with col_login1:
-        if st.button("ログイン"):
+        if st.button("ログイン", use_container_width=True):
             if password_input == PASSWORD:
                 st.session_state.authenticated = True
                 st.success("ログインに成功しました。")
-                st.rerun()  # 画面を再描画してメインUIを表示
+                st.rerun()
             else:
                 st.session_state.authenticated = False
                 st.error("パスワードが違います。")
  
-    # ログインしていない間はここで処理終了
     st.stop()
  
-# ---- ここから下は「ログイン後のみ」表示される ----
- 
-# ログアウトと取得状況リセットボタン
-top_col1, top_col2, top_col3 = st.columns([1, 1, 6])
+# ---- ログイン後 ----
+top_col1, top_col2 = st.columns(2)
 with top_col1:
-    if st.button("ログアウト"):
-        reset_login_state(clear_data=False)  # 取得状況は残す
+    if st.button("ログアウト", use_container_width=True):
+        reset_login_state(clear_data=False)
         st.rerun()
 with top_col2:
-    if st.button("取得状況をリセット"):
+    if st.button("取得状況をリセット", use_container_width=True):
         st.session_state.acquired_ids = set()
         st.session_state.superior_ids = set()
         st.success("取得状況をリセットしました。")
-with top_col3:
-    st.write("")  # 余白
  
 st.markdown("---")
  
-# ---- データ読み込み ----
+# ---- データ読込 ----
 try:
     df, rank_list, kubun_list = load_data()
 except FileNotFoundError:
@@ -129,12 +138,10 @@ except FileNotFoundError:
 acquired_ids = st.session_state.acquired_ids
 superior_ids = st.session_state.superior_ids
  
-# ---- データの仕分け（Flask 版の login() でやっていた部分） ----
 records = df.to_dict(orient="records")
- 
-remaining_records = []  # 未取得
-acquired_records = []   # 取得済み（上位互換はまだ）
-superior_records = []   # 上位互換を取得済み
+remaining_records = []
+acquired_records = []
+superior_records = []
  
 for rec in records:
     idx = rec["id"]
@@ -146,50 +153,34 @@ for rec in records:
     else:
         remaining_records.append(rec)
  
- 
-# ---- フィルタ・検索（サイドバー） ----
- 
+# ---- サイドバー（スマホでも触りやすいシンプル構成） ----
 st.sidebar.header("検索・フィルタ")
- 
-# 見出しと余白で少し見やすくする
 st.sidebar.subheader("基本条件")
+
 selected_ranks = st.sidebar.multiselect(
     "ランクで絞り込み",
     options=rank_list,
     default=rank_list,
 )
-st.sidebar.write("")  # 余白
- 
 selected_kubun = st.sidebar.multiselect(
     "区分で絞り込み",
     options=kubun_list,
     default=kubun_list,
 )
 st.sidebar.markdown("---")
- 
 st.sidebar.subheader("フリーワード検索")
 keyword = st.sidebar.text_input(
-    "資格名・ランク・区分・金額 などを横断検索",
+    "資格名・ランク・区分・金額 など",
     value="",
-    placeholder="例）IT パスポート, 技術士, Aランク など"
+    placeholder="例）IT パスポート, 技術士 など"
 )
 st.sidebar.caption("※ 大文字／小文字は区別しません。部分一致です。")
  
-st.sidebar.markdown("---")
-st.sidebar.caption("条件を変更すると自動で絞り込みが反映されます。")
- 
  
 def match_freeword(rec: dict, keyword: str) -> bool:
-    """
-    フリーワード検索用:
-    資格名 / ランク / 区分 / 金額 などをまとめて文字列にし、
-    keyword が含まれるかどうかを判定する
-    """
     if not keyword:
         return True
- 
     k = keyword.lower()
-    # 検索対象にするカラムを必要に応じて増減してください
     fields = [
         str(rec.get("資格名", "")),
         str(rec.get("ランク", "")),
@@ -201,9 +192,6 @@ def match_freeword(rec: dict, keyword: str) -> bool:
  
  
 def filter_records(rec_list):
-    """
-    ランク・区分・フリーワードでフィルタする共通関数
-    """
     filtered = []
     for r in rec_list:
         if r.get("ランク") not in selected_ranks:
@@ -235,34 +223,34 @@ else:
         kubun = rec.get("区分", "")
         money = rec.get("金額", "")
  
-        # 表示行
-        # col2: 「取得」ボタン（= 取得済みタブに移動）
-        # col3: 「上位互換を取得」ボタン（= 上位互換を取得済みタブに移動）
-        row_col1, row_col2, row_col3 = st.columns([4, 1, 1])
-        with row_col1:
+        # スマホでも見やすいように 2 カラム構成に簡略化
+        card = st.container()
+        with card:
             st.markdown(
-                f"**{qual_name}**  "
-                f"(ランク: {rank}, 区分: {kubun}, 金額: {money})"
+                f'<div class="qual-card">'
+                f'<b>{qual_name}</b><br>'
+                f'ランク: {rank}　区分: {kubun}　金額: {money}'
+                f'</div>',
+                unsafe_allow_html=True
             )
-        with row_col2:
-            if st.button("取得", key=f"acquire_{idx}"):
-                # 取得済みにする（上位互換フラグは外す）
-                acquired_ids.add(idx)
-                if idx in superior_ids:
-                    superior_ids.discard(idx)
-                st.session_state.acquired_ids = acquired_ids
-                st.session_state.superior_ids = superior_ids
-                st.rerun()
-        with row_col3:
-            if st.button("上位互換を取得", key=f"acquire_superior_{idx}"):
-                # 直接「上位互換を取得済み」にする
-                acquired_ids.add(idx)
-                superior_ids.add(idx)
-                st.session_state.acquired_ids = acquired_ids
-                st.session_state.superior_ids = superior_ids
-                st.rerun()
+            btn_col1, btn_col2 = st.columns(2)
+            with btn_col1:
+                if st.button("取得", key=f"acquire_{idx}", use_container_width=True):
+                    acquired_ids.add(idx)
+                    if idx in superior_ids:
+                        superior_ids.discard(idx)
+                    st.session_state.acquired_ids = acquired_ids
+                    st.session_state.superior_ids = superior_ids
+                    st.rerun()
+            with btn_col2:
+                # ★ 文言を短く「上位互換」に変更（2行になりにくくする）
+                if st.button("上位互換", key=f"acquire_superior_{idx}", use_container_width=True):
+                    acquired_ids.add(idx)
+                    superior_ids.add(idx)
+                    st.session_state.acquired_ids = acquired_ids
+                    st.session_state.superior_ids = superior_ids
+                    st.rerun()
  
-# 少し余白
 st.markdown("")
  
 # =========================================================
@@ -280,30 +268,33 @@ else:
         kubun = rec.get("区分", "")
         money = rec.get("金額", "")
  
-        row_col1, row_col2, row_col3 = st.columns([4, 1, 2])
-        with row_col1:
+        card = st.container()
+        with card:
             st.markdown(
-                f"**{qual_name}**  "
-                f"(ランク: {rank}, 区分: {kubun}, 金額: {money})"
+                f'<div class="qual-card">'
+                f'<b>{qual_name}</b><br>'
+                f'ランク: {rank}　区分: {kubun}　金額: {money}'
+                f'</div>',
+                unsafe_allow_html=True
             )
-        with row_col2:
-            if st.button("取得解除", key=f"unacquire_{idx}"):
-                # acquired_ids / superior_ids から削除
-                if idx in acquired_ids:
-                    acquired_ids.remove(idx)
-                if idx in superior_ids:
-                    superior_ids.remove(idx)
-                st.session_state.acquired_ids = acquired_ids
-                st.session_state.superior_ids = superior_ids
-                st.rerun()
-        with row_col3:
-            if st.button("上位互換取得済みにする", key=f"set_superior_{idx}"):
-                # acquired_ids / superior_ids に追加
-                acquired_ids.add(idx)
-                superior_ids.add(idx)
-                st.session_state.acquired_ids = acquired_ids
-                st.session_state.superior_ids = superior_ids
-                st.rerun()
+            btn_col1, btn_col2 = st.columns(2)
+            with btn_col1:
+                if st.button("取得解除", key=f"unacquire_{idx}", use_container_width=True):
+                    if idx in acquired_ids:
+                        acquired_ids.remove(idx)
+                    if idx in superior_ids:
+                        superior_ids.remove(idx)
+                    st.session_state.acquired_ids = acquired_ids
+                    st.session_state.superior_ids = superior_ids
+                    st.rerun()
+            with btn_col2:
+                # ここもラベル短めに
+                if st.button("上位互換に変更", key=f"set_superior_{idx}", use_container_width=True):
+                    acquired_ids.add(idx)
+                    superior_ids.add(idx)
+                    st.session_state.acquired_ids = acquired_ids
+                    st.session_state.superior_ids = superior_ids
+                    st.rerun()
  
 st.markdown("")
  
@@ -322,14 +313,16 @@ else:
         kubun = rec.get("区分", "")
         money = rec.get("金額", "")
  
-        row_col1, row_col2 = st.columns([4, 2])
-        with row_col1:
+        card = st.container()
+        with card:
             st.markdown(
-                f"**{qual_name}**  "
-                f"(ランク: {rank}, 区分: {kubun}, 金額: {money})"
+                f'<div class="qual-card">'
+                f'<b>{qual_name}</b><br>'
+                f'ランク: {rank}　区分: {kubun}　金額: {money}'
+                f'</div>',
+                unsafe_allow_html=True
             )
-        with row_col2:
-            if st.button("上位互換フラグ解除", key=f"unset_superior_{idx}"):
+            if st.button("上位互換フラグ解除", key=f"unset_superior_{idx}", use_container_width=True):
                 if idx in superior_ids:
                     superior_ids.remove(idx)
                 st.session_state.superior_ids = superior_ids
