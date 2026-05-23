@@ -86,7 +86,7 @@ st.markdown(
         background-color: #ffffff;
     }
 
-    /* 資格カード同士の区切り線 */
+    /* 資格カード同士の区切り線（下側のみで使用） */
     .qual-card-separator {
         border: none;
         border-top: 1px solid #cccccc;
@@ -356,8 +356,7 @@ def render_qual_card(rec, mode: str):
     kubun = rec.get("区分", "")
     money = rec.get("金額", "")
 
-    # ▼ 各資格カードの「上」に横線
-    st.markdown('<hr class="qual-card-separator">', unsafe_allow_html=True)
+    # ★ 上側の区切り線は削除（ここでは何もしない）
 
     with st.container():
         # 資格情報の枠
@@ -372,7 +371,7 @@ def render_qual_card(rec, mode: str):
             unsafe_allow_html=True
         )
 
-        # ▼ ボタン行（縦並び）
+        # ▼ ボタン行
         st.markdown('<div class="qual-card-btn-row">', unsafe_allow_html=True)
 
         if mode == "unacquired":
@@ -426,7 +425,7 @@ def render_qual_card(rec, mode: str):
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # ▼ 各資格カードの「下」（最後のボタンの下）に横線
+    # ▼ 各資格カードの「下」（最後のボタンの下）に横線のみ表示
     st.markdown('<hr class="qual-card-separator">', unsafe_allow_html=True)
 
 
@@ -446,10 +445,10 @@ if st.session_state.show_unacquired:
 #  取得済み（上位互換はまだ）
 # =========================================================
 if st.session_state.show_acquired:
-    st.subheader("取得済み（上位互換はまだ）の資格")
+    st.subheader("取得済みの資格")
 
     if not acquired_records_filtered:
-        st.info("条件に合致する『取得済み（上位互換はまだ）』の資格はありません。")
+        st.info("条件に合致する『取得済み』の資格はありません。")
     else:
         for rec in acquired_records_filtered:
             render_qual_card(rec, mode="acquired")
