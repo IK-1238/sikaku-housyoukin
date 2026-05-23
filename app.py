@@ -62,7 +62,7 @@ def reset_login_state(clear_data: bool = False):
         st.session_state.superior_ids = set()
 
 
-# ====== ページ設定（スマホ向けに中央寄せ）============
+# ====== ページ設定 ====================================
 st.set_page_config(
     page_title="資格報奨金 管理アプリ",
     page_icon="✅",
@@ -77,7 +77,7 @@ st.markdown(
         font-size: 16px;
     }
 
-    /* 1枚のカード全体の見た目（資格情報＋ボタンをまとめて見せる箱） */
+    /* 1枚のカード全体の見た目（資格情報の枠） */
     .qual-card-wrapper {
         padding: 0.45rem 0.6rem 0.4rem;
         margin-bottom: 0.45rem;
@@ -105,28 +105,29 @@ st.markdown(
         margin-bottom: 0.2rem;
     }
 
-    /* カード下部のボタン行：テキストとボタンの間隔をかなり狭くする */
+    /* カード下部のボタン行：テキストとボタンの間隔を少しだけ */
     .qual-card-btn-row {
-        margin-top: 0.2rem;
+        margin-top: 0.3rem;
+        margin-bottom: 0.1rem;
     }
 
-    /* ▼ ボタンを今より小さく（おおよそ半分） */
-    .qual-card-wrapper .stButton > button {
+    /* ▼ ボタンのデザイン（かなり薄い青 + 小さめサイズ） */
+    .stButton > button {
         white-space: nowrap;
-        font-size: 0.6rem;          /* 文字を小さく */
-        padding: 0.15rem 0.35rem;   /* 余白も小さく */
-        background-color: #e3f2fd;
+        font-size: 0.6rem;          /* 文字小さめ */
+        padding: 0.15rem 0.35rem;   /* 余白少なめ */
+        background-color: #e8f4ff;  /* かなり薄い青 */
         color: #0d47a1;
-        border: 1px solid #90caf9;
+        border: 1px solid #bcdfff;
         border-radius: 0.25rem;
-        width: 100%;                /* カラム幅の中で横に広げる */
+        width: 100%;                /* 各カラムの幅いっぱいに */
         min-width: 0;
         box-sizing: border-box;
     }
-    .qual-card-wrapper .stButton > button:hover {
-        background-color: #bbdefb;
+    .stButton > button:hover {
+        background-color: #d7ecff;  /* 少し濃く */
         color: #0d47a1;
-        border-color: #64b5f6;
+        border-color: #99cdff;
     }
 
     h2, h3 {
@@ -143,7 +144,6 @@ st.markdown(
         margin-bottom: 0.1rem;
     }
 
-    /* Streamlit の各カードコンテナに枠デザインを適用するためのラッパ */
     .card-root {
         padding: 0;
         margin: 0;
@@ -159,7 +159,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# ==== アプリ名のすぐ下に、タブ表示オン/オフ用チェックボックス ====
+# ==== タブ表示オン/オフ用チェックボックス ====
 if st.session_state.authenticated:
     st.markdown('<div class="tab-toggle-label">表示するタブを選択：</div>', unsafe_allow_html=True)
     tab_col1, tab_col2, tab_col3 = st.columns(3)
@@ -346,88 +346,78 @@ def render_qual_card(rec, mode: str):
     kubun = rec.get("区分", "")
     money = rec.get("金額", "")
 
-    # 1枚のカードを表すコンテナ
     with st.container():
-        # 外側枠（資格情報部）
+        # 資格情報の枠
         st.markdown(
             f"""
             <div class="card-root"><div class="qual-card-wrapper"><div class="qual-name-box"><span class="qual-name-text">{qual_name}</span></div><div class="qual-meta">
                     ランク: {rank}<br>
                     区分: {kubun}<br>
                     金額: {money}
-                </div>
+                </div></div></div>
             """,
             unsafe_allow_html=True
         )
 
-        # ▼ ボタン行（同じ card-wrapper の一部分に見せる）
-        # ここで Streamlit の都合により実際の DOM としては別 div になりますが、
-        # CSS で padding / margin を調整して「同じ箱の中」に見えるようにしています。
-        btn_row = st.container()
-        with btn_row:
-            st.markdown('<div class="qual-card-btn-row">', unsafe_allow_html=True)
-            col1, col2 = st.columns(2, gap="small")
+        # ▼ ボタン行（枠のすぐ下・横並び）
+        st.markdown('<div class="qual-card-btn-row">', unsafe_allow_html=True)
+        col1, col2 = st.columns(2, gap="small")
 
-            if mode == "unacquired":
-                with col1:
-                    if st.button("取得", key=f"acquire_{idx}"):
-                        acquired_ids = st.session_state.acquired_ids
-                        superior_ids = st.session_state.superior_ids
-                        acquired_ids.add(idx)
-                        if idx in superior_ids:
-                            superior_ids.discard(idx)
-                        st.session_state.acquired_ids = acquired_ids
-                        st.session_state.superior_ids = superior_ids
-                        st.rerun()
-                with col2:
-                    if st.button("上位互換取得", key=f"acquire_superior_{idx}"):
-                        acquired_ids = st.session_state.acquired_ids
-                        superior_ids = st.session_state.superior_ids
-                        acquired_ids.add(idx)
-                        superior_ids.add(idx)
-                        st.session_state.acquired_ids = acquired_ids
-                        st.session_state.superior_ids = superior_ids
-                        st.rerun()
+        if mode == "unacquired":
+            with col1:
+                if st.button("取得", key=f"acquire_{idx}"):
+                    acquired_ids = st.session_state.acquired_ids
+                    superior_ids = st.session_state.superior_ids
+                    acquired_ids.add(idx)
+                    if idx in superior_ids:
+                        superior_ids.discard(idx)
+                    st.session_state.acquired_ids = acquired_ids
+                    st.session_state.superior_ids = superior_ids
+                    st.rerun()
+            with col2:
+                if st.button("上位互換取得", key=f"acquire_superior_{idx}"):
+                    acquired_ids = st.session_state.acquired_ids
+                    superior_ids = st.session_state.superior_ids
+                    acquired_ids.add(idx)
+                    superior_ids.add(idx)
+                    st.session_state.acquired_ids = acquired_ids
+                    st.session_state.superior_ids = superior_ids
+                    st.rerun()
 
-            elif mode == "acquired":
-                with col1:
-                    if st.button("取得解除", key=f"unacquire_{idx}"):
-                        acquired_ids = st.session_state.acquired_ids
-                        superior_ids = st.session_state.superior_ids
-                        if idx in acquired_ids:
-                            acquired_ids.remove(idx)
-                        if idx in superior_ids:
-                            superior_ids.remove(idx)
-                        st.session_state.acquired_ids = acquired_ids
-                        st.session_state.superior_ids = superior_ids
-                        st.rerun()
-                with col2:
-                    if st.button("上位互換取得に変更", key=f"set_superior_{idx}"):
-                        acquired_ids = st.session_state.acquired_ids
-                        superior_ids = st.session_state.superior_ids
-                        acquired_ids.add(idx)
-                        superior_ids.add(idx)
-                        st.session_state.acquired_ids = acquired_ids
-                        st.session_state.superior_ids = superior_ids
-                        st.rerun()
+        elif mode == "acquired":
+            with col1:
+                if st.button("取得解除", key=f"unacquire_{idx}"):
+                    acquired_ids = st.session_state.acquired_ids
+                    superior_ids = st.session_state.superior_ids
+                    if idx in acquired_ids:
+                        acquired_ids.remove(idx)
+                    if idx in superior_ids:
+                        superior_ids.remove(idx)
+                    st.session_state.acquired_ids = acquired_ids
+                    st.session_state.superior_ids = superior_ids
+                    st.rerun()
+            with col2:
+                if st.button("上位互換取得に変更", key=f"set_superior_{idx}"):
+                    acquired_ids = st.session_state.acquired_ids
+                    superior_ids = st.session_state.superior_ids
+                    acquired_ids.add(idx)
+                    superior_ids.add(idx)
+                    st.session_state.acquired_ids = acquired_ids
+                    st.session_state.superior_ids = superior_ids
+                    st.rerun()
 
-            elif mode == "superior":
-                # 上位互換解除のみ
-                with col1:
-                    if st.button("上位互換フラグ解除", key=f"unset_superior_{idx}"):
-                        superior_ids = st.session_state.superior_ids
-                        if idx in superior_ids:
-                            superior_ids.remove(idx)
-                        st.session_state.superior_ids = superior_ids
-                        st.rerun()
-                # 右側カラムをダミーとして空けておく
-                with col2:
-                    st.write("")
+        elif mode == "superior":
+            with col1:
+                if st.button("上位互換フラグ解除", key=f"unset_superior_{idx}"):
+                    superior_ids = st.session_state.superior_ids
+                    if idx in superior_ids:
+                        superior_ids.remove(idx)
+                    st.session_state.superior_ids = superior_ids
+                    st.rerun()
+            with col2:
+                st.write("")
 
-            st.markdown("</div>", unsafe_allow_html=True)
-
-        # 外側枠の閉じタグ（視覚的な一体化のためにここで閉じています）
-        st.markdown("</div></div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
 # =========================================================
