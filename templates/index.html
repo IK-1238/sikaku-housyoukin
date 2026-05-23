@@ -1,0 +1,449 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>資格報奨金 一覧</title><!-- スマホ対応のためのビューポート指定 --><meta name="viewport" content="width=device-width, initial-scale=1"><style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 14px;
+            margin: 8px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 4px 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f0f0f0;
+        }
+        .filter-area {
+            margin-bottom: 16px;
+        }
+        /* 各フィルタ行：横線で区切る */
+        .filter-section {
+            width: 100%;
+            padding: 8px 0;
+            border-bottom: 1px solid #ccc;  /* 画面いっぱいの横線 */
+            box-sizing: border-box;
+        }
+        /* 左側のタイトルラベル */
+        .filter-label {
+            font-weight: bold;
+            margin-right: 8px;
+            display: inline-block;
+            min-width: 90px;
+        }
+        /* 資格名入力欄は、横幅いっぱいを使いやすくする */
+        #nameFilter {
+            width: 60%;          /* PC では 60% */
+            max-width: 400px;
+            box-sizing: border-box;
+        }
+        /* ランクのチェックボックス群：横並び・折り返しなし（はみ出したら横スクロール） */
+        .rank-filter-group {
+            display: inline-block;
+            margin-top: 4px;
+            white-space: nowrap;          /* 折り返さない */
+            overflow-x: auto;             /* はみ出たら横スクロール */
+        }
+        /* ランク A, B, C... の各ラベルを横一列に並べる */
+        .rank-item {
+            display: inline-flex;         /* インライン要素として横並び */
+            align-items: center;
+            margin-right: 8px;
+        }
+        /* 区分フィルタ：横一列・折り返しなし・スクロールなし */
+        .kubun-filter-group {
+            display: inline-block;
+            margin-top: 4px;
+            white-space: nowrap;          /* 折り返さない */
+        }
+        .kubun-item {
+            display: inline-flex;
+            align-items: center;
+            margin-right: 18px;   /* タブ同士の間隔 */
+            padding: 4px 6px;
+        }
+        /* ボタン行（最後の横線の下に配置） */
+        .filter-buttons {
+            margin-top: 8px;
+        }
+        /* ボタン共通 */
+        .filter-area button {
+            margin-right: 8px;
+            margin-bottom: 4px;
+            padding: 6px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        /* 絞り込みボタン：淡い赤色 */
+        .btn-apply {
+            background-color: #f8caca;
+            color: #333;
+        }
+        .btn-apply:hover {
+            background-color: #f4b5b5;
+        }
+        /* 絞り込み解除・並び替えボタンは薄いグレー */
+        .btn-clear,
+        .btn-sort {
+            background-color: #f5f5f5;
+        }
+        .btn-sort:hover,
+        .btn-clear:hover {
+            background-color: #e9e9e9;
+        }
+        /* セクションタイトル */
+        .section-title {
+            margin-top: 16px;
+            margin-bottom: 4px;
+            font-weight: bold;
+        }
+        /* セクション全体のラッパー */
+        .section-block {
+            margin-bottom: 16px;
+        }
+        /* セクション表示/非表示のトグル */
+        .section-toggle-area {
+            margin-bottom: 8px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #fafafa;
+        }
+        .section-toggle-area label {
+            margin-right: 12px;
+            display: inline-flex;
+            align-items: center;
+        }
+        /* --- ここからスマホ向けの調整 --- */
+        @media (max-width: 600px) {
+            body {
+                font-size: 15px;
+            }
+            .filter-label {
+                display: block;     /* ラベルを1行に出す */
+                margin-bottom: 4px; /* ラベル下に少し余白 */
+                min-width: auto;
+            }
+            #nameFilter {
+                width: 100%;        /* スマホでは横幅いっぱい */
+                max-width: none;
+            }
+            .rank-filter-group,
+            .kubun-filter-group {
+                display: block;
+                width: 100%;
+                overflow-x: auto;
+            }
+            .filter-area button {
+                width: 100%;        /* ボタンを横幅いっぱいに */
+                margin-right: 0;
+            }
+            .filter-buttons {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+            .section-toggle-area {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+            table {
+                font-size: 13px;
+            }
+            th, td {
+                padding: 4px 6px;
+            }
+        }
+        /* --- 操作ボタン用の簡易スタイル --- */
+        .action-form {
+            display: inline-block;
+            margin: 0 2px;
+        }
+        .action-form button {
+            padding: 2px 6px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+    </style></head><body><h1>資格報奨金 一覧</h1><div class="filter-area"><!-- 資格名で検索（横線で区切り） --><div class="filter-section"><span class="filter-label">資格名で検索：</span><input type="text" id="nameFilter" placeholder="資格名を入力"></div><!-- ランク（横線で区切り） --><div class="filter-section"><span class="filter-label">ランク（複数選択可）：</span><div class="rank-filter-group">
+            {% for rank in rank_list %}
+                <label class="rank-item"><input type="checkbox" name="rankFilter" value="{{ rank }}">
+                    {{ rank }}
+                </label>
+            {% endfor %}
+        </div></div><!-- 区分（横線で区切り・折り返しなし・スクロールなし） --><div class="filter-section"><span class="filter-label">区分（複数選択可）：</span><div class="kubun-filter-group">
+            {% for kubun in kubun_list %}
+                <label class="kubun-item"><input type="checkbox" name="kubunFilter" value="{{ kubun }}">
+                    {{ kubun }}
+                </label>
+            {% endfor %}
+        </div></div><!-- ボタン --><div class="filter-buttons"><button id="applyFilter" class="btn-apply">絞り込み</button><button id="clearFilter" class="btn-clear">絞り込み解除</button><button id="sortRankDesc" class="btn-sort">ランク降順で並び替え</button></div></div><!-- セクション表示/非表示トグル --><div class="section-toggle-area"><label><input type="checkbox" class="section-toggle" data-target="section-remaining" checked>
+        未取得を表示
+    </label><label><input type="checkbox" class="section-toggle" data-target="section-acquired" checked>
+        取得済みを表示
+    </label><label><input type="checkbox" class="section-toggle" data-target="section-superior" checked>
+        上位互換を取得済みを表示
+    </label></div><!-- 未取得資格テーブル --><div id="section-remaining" class="section-block"><div class="section-title">未取得の資格</div><table id="licenseTableRemaining"><thead><tr><th>資格名</th><th>ランク</th><th>区分</th><th>金額</th><th>操作</th></tr></thead><tbody>
+        {# 未取得のレコード #}
+        {% for row in remaining_records %}
+            <tr data-record-id="{{ row['id'] }}"><td class="col-name">{{ row["資格名"] }}</td><td class="col-rank">{{ row["ランク"] }}</td><td class="col-kubun">{{ row["区分"] }}</td><td>{{ row["金額"] }}</td><td><!-- 取得済みにする --><form class="action-form" method="post" action="{{ url_for('acquire') }}"><input type="hidden" name="record_id" value="{{ row['id'] }}"><button type="submit">取得済みにする</button></form><!-- 上位互換を取得済みにする（＝取得済み＋上位フラグ） --><form class="action-form" method="post" action="{{ url_for('set_superior') }}"><input type="hidden" name="record_id" value="{{ row['id'] }}"><button type="submit">上位互換を取得済み</button></form></td></tr>
+        {% endfor %}
+        </tbody></table></div><!-- 取得済み資格テーブル --><div id="section-acquired" class="section-block"><div class="section-title">取得済みの資格</div><table id="licenseTableAcquired"><thead><tr><th>資格名</th><th>ランク</th><th>区分</th><th>金額</th><th>操作</th></tr></thead><tbody>
+        {# 取得済みのレコード #}
+        {% for row in acquired_records %}
+            <tr data-record-id="{{ row['id'] }}"><td class="col-name">{{ row["資格名"] }}</td><td class="col-rank">{{ row["ランク"] }}</td><td class="col-kubun">{{ row["区分"] }}</td><td>{{ row["金額"] }}</td><td><!-- 未取得に戻す --><form class="action-form" method="post" action="{{ url_for('unacquire') }}"><input type="hidden" name="record_id" value="{{ row['id'] }}"><button type="submit">未取得に戻す</button></form><!-- 上位互換を取得済みにする --><form class="action-form" method="post" action="{{ url_for('set_superior') }}"><input type="hidden" name="record_id" value="{{ row['id'] }}"><button type="submit">上位互換を取得済み</button></form></td></tr>
+        {% endfor %}
+        </tbody></table></div><!-- 上位互換を取得済み資格テーブル --><div id="section-superior" class="section-block"><div class="section-title">上位互換を取得済みの資格</div><table id="licenseTableSuperior"><thead><tr><th>資格名</th><th>ランク</th><th>区分</th><th>金額</th><th>操作</th></tr></thead><tbody>
+        {# 上位互換を取得済みのレコード #}
+        {% for row in superior_records %}
+            <tr data-record-id="{{ row['id'] }}"><td class="col-name">{{ row["資格名"] }}</td><td class="col-rank">{{ row["ランク"] }}</td><td class="col-kubun">{{ row["区分"] }}</td><td>{{ row["金額"] }}</td><td><!-- 上位互換フラグを外して、単なる「取得済み」に戻す --><form class="action-form" method="post" action="{{ url_for('unset_superior') }}"><input type="hidden" name="record_id" value="{{ row['id'] }}"><button type="submit">上位互換フラグ解除</button></form><!-- 完全に未取得に戻す --><form class="action-form" method="post" action="{{ url_for('unacquire') }}"><input type="hidden" name="record_id" value="{{ row['id'] }}"><button type="submit">未取得に戻す</button></form></td></tr>
+        {% endfor %}
+        </tbody></table></div><!-- JavaScript --><script>
+    // ページ読み込み完了後にイベントを設定
+    document.addEventListener('DOMContentLoaded', function () {
+        const nameInput   = document.getElementById('nameFilter');
+        const applyBtn    = document.getElementById('applyFilter');
+        const clearBtn    = document.getElementById('clearFilter');
+        const sortRankBtn = document.getElementById('sortRankDesc');
+
+        const tableRemaining  = document.getElementById('licenseTableRemaining');
+        const tbodyRemaining  = tableRemaining ? tableRemaining.querySelector('tbody') : null;
+
+        const tableAcquired   = document.getElementById('licenseTableAcquired');
+        const tbodyAcquired   = tableAcquired ? tableAcquired.querySelector('tbody') : null;
+
+        const tableSuperior   = document.getElementById('licenseTableSuperior');
+        const tbodySuperior   = tableSuperior ? tableSuperior.querySelector('tbody') : null;
+
+        // セクション表示/非表示トグル
+        const sectionToggles = document.querySelectorAll('.section-toggle');
+
+        if (!tbodyRemaining) {
+            return;
+        }
+
+        // サーバ側URL（Jinjaで埋め込み）
+        const URL_ACQUIRE        = "{{ url_for('acquire') }}";
+        const URL_UNACQUIRE      = "{{ url_for('unacquire') }}";
+        const URL_SET_SUPERIOR   = "{{ url_for('set_superior') }}";
+        const URL_UNSET_SUPERIOR = "{{ url_for('unset_superior') }}";
+
+        // 絞り込み処理（未取得テーブルに対してのみ）
+        function applyFilter() {
+            const nameKeyword = nameInput ? nameInput.value.trim().toLowerCase() : '';
+
+            // チェックされているランクを配列で取得
+            const checkedRanks = Array.from(
+                document.querySelectorAll('input[name="rankFilter"]:checked')
+            ).map(cb => cb.value);
+
+            // チェックされている区分を配列で取得
+            const checkedKubun = Array.from(
+                document.querySelectorAll('input[name="kubunFilter"]:checked')
+            ).map(cb => cb.value);
+
+            // 各行を判定（未取得テーブルのみ）
+            Array.from(tbodyRemaining.rows).forEach(row => {
+                const nameCell  = row.querySelector('.col-name');
+                const rankCell  = row.querySelector('.col-rank');
+                const kubunCell = row.querySelector('.col-kubun');  // 区分セル
+
+                if (!nameCell || !rankCell || !kubunCell) {
+                    return;
+                }
+                const nameText  = nameCell.textContent.toLowerCase();
+                const rankText  = rankCell.textContent.trim();
+                const kubunText = kubunCell.textContent.trim();
+
+                // 資格名フィルタ（空欄なら常に true）
+                const nameMatch  = (nameKeyword === '') || nameText.includes(nameKeyword);
+                // ランクフィルタ（チェックなしなら全ランク許可）
+                const rankMatch  = (checkedRanks.length === 0) || checkedRanks.includes(rankText);
+                // 区分フィルタ（チェックなしなら全区分許可）
+                const kubunMatch = (checkedKubun.length === 0) || checkedKubun.includes(kubunText);
+
+                // 3つすべてを満たす行だけ表示
+                if (nameMatch && rankMatch && kubunMatch) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // 絞り込み解除処理
+        function clearFilter() {
+            if (nameInput) {
+                nameInput.value = '';
+            }
+            // ランクのチェックを外す
+            document
+                .querySelectorAll('input[name="rankFilter"]:checked')
+                .forEach(cb => (cb.checked = false));
+            // 区分のチェックを外す
+            document
+                .querySelectorAll('input[name="kubunFilter"]:checked')
+                .forEach(cb => (cb.checked = false));
+            // 未取得テーブルの全行を表示
+            Array.from(tbodyRemaining.rows).forEach(row => {
+                row.style.display = '';
+            });
+        }
+
+        // ランク降順で並び替え（未取得テーブルに対してのみ）
+        function sortByRankDesc() {
+            // ランクの並び順定義（上から順に優先度が高い）
+            const rankPriority = ["X", "SSS", "SS", "S", "A", "B", "C", "D", "E", "F"];
+            // ランク → インデックス のマップを用意
+            const rankIndexMap = {};
+            rankPriority.forEach((r, idx) => {
+                rankIndexMap[r] = idx;
+            });
+
+            const rows = Array.from(tbodyRemaining.rows);
+            rows.sort((a, b) => {
+                const rankA = a.querySelector('.col-rank')?.textContent.trim() || "";
+                const rankB = b.querySelector('.col-rank')?.textContent.trim() || "";
+                const idxA = rankIndexMap.hasOwnProperty(rankA) ? rankIndexMap[rankA] : Number.POSITIVE_INFINITY;
+                const idxB = rankIndexMap.hasOwnProperty(rankB) ? rankIndexMap[rankB] : Number.POSITIVE_INFINITY;
+                // インデックスが小さいほど上に来る（= rankPriority の順）
+                if (idxA < idxB) return -1;
+                if (idxA > idxB) return 1;
+                return 0;
+            });
+
+            // 並び替えた順に tbody へ再挿入
+            rows.forEach(row => tbodyRemaining.appendChild(row));
+        }
+
+        // セクション表示/非表示の処理
+        function updateSectionVisibility() {
+            sectionToggles.forEach(function (toggle) {
+                const targetId = toggle.getAttribute('data-target');
+                const section  = document.getElementById(targetId);
+                if (!section) return;
+                section.style.display = toggle.checked ? '' : 'none';
+            });
+        }
+
+        // ボタンにイベント紐づけ
+        if (applyBtn) {
+            applyBtn.addEventListener('click', applyFilter);
+        }
+        if (clearBtn) {
+            clearBtn.addEventListener('click', clearFilter);
+        }
+        if (sortRankBtn) {
+            sortRankBtn.addEventListener('click', sortByRankDesc);
+        }
+
+        // Enterキーで絞り込みたい場合（資格名）
+        if (nameInput) {
+            nameInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault(); // フォーム送信を防ぐ
+                    applyFilter();
+                }
+            });
+        }
+
+        // セクション表示/非表示トグルにイベントを登録
+        sectionToggles.forEach(function (toggle) {
+            toggle.addEventListener('change', updateSectionVisibility);
+        });
+
+        // 初期表示の反映
+        updateSectionVisibility();
+
+        // ----------------------------
+        // ここから 操作ボタン（取得済みなど）のAJAX化 ＋ DOM更新
+        // ----------------------------
+
+        // 1つのフォームにAJAX送信ハンドラを付与
+        function bindActionForm(form) {
+            if (!form || form.dataset.bound === '1') {
+                return;
+            }
+            form.dataset.bound = '1';
+
+            form.addEventListener('submit', function (e) {
+                e.preventDefault(); // 通常のフォーム送信を止める
+
+                const formData = new FormData(form);
+                const actionUrl = form.getAttribute('action');
+                const row       = form.closest('tr');
+                if (!row) return;
+
+                fetch(actionUrl, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'  // AJAX であることを示す
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) {
+                        alert('更新に失敗しました。');
+                        return;
+                    }
+
+                    // サーバ側で状態更新済みなので、
+                    // ページリロードは行わず、行の所属テーブルとボタンだけを更新する
+                    const recordId = row.dataset.recordId;
+                    const opTd     = row.querySelector('td:last-child');
+
+                    if (!recordId || !opTd) {
+                        return;
+                    }
+
+                    // どの操作かで分岐
+                    if (actionUrl === URL_ACQUIRE) {
+                        // 未取得 -> 取得済み
+                        opTd.innerHTML = `
+                            <form class="action-form" method="post" action="${URL_UNACQUIRE}"><input type="hidden" name="record_id" value="${recordId}"><button type="submit">未取得に戻す</button></form><form class="action-form" method="post" action="${URL_SET_SUPERIOR}"><input type="hidden" name="record_id" value="${recordId}"><button type="submit">上位互換を取得済み</button></form>
+                        `;
+                        tbodyAcquired.appendChild(row);
+
+                    } else if (actionUrl === URL_UNACQUIRE) {
+                        // 取得済み or 上位互換 -> 未取得
+                        opTd.innerHTML = `
+                            <form class="action-form" method="post" action="${URL_ACQUIRE}"><input type="hidden" name="record_id" value="${recordId}"><button type="submit">取得済みにする</button></form><form class="action-form" method="post" action="${URL_SET_SUPERIOR}"><input type="hidden" name="record_id" value="${recordId}"><button type="submit">上位互換を取得済み</button></form>
+                        `;
+                        tbodyRemaining.appendChild(row);
+                        // 現在の絞り込み条件を反映
+                        applyFilter();
+
+                    } else if (actionUrl === URL_SET_SUPERIOR) {
+                        // 未取得 or 取得済み -> 上位互換を取得済み
+                        opTd.innerHTML = `
+                            <form class="action-form" method="post" action="${URL_UNSET_SUPERIOR}"><input type="hidden" name="record_id" value="${recordId}"><button type="submit">上位互換フラグ解除</button></form><form class="action-form" method="post" action="${URL_UNACQUIRE}"><input type="hidden" name="record_id" value="${recordId}"><button type="submit">未取得に戻す</button></form>
+                        `;
+                        tbodySuperior.appendChild(row);
+
+                    } else if (actionUrl === URL_UNSET_SUPERIOR) {
+                        // 上位互換 -> 単なる取得済み
+                        opTd.innerHTML = `
+                            <form class="action-form" method="post" action="${URL_UNACQUIRE}"><input type="hidden" name="record_id" value="${recordId}"><button type="submit">未取得に戻す</button></form><form class="action-form" method="post" action="${URL_SET_SUPERIOR}"><input type="hidden" name="record_id" value="${recordId}"><button type="submit">上位互換を取得済み</button></form>
+                        `;
+                        tbodyAcquired.appendChild(row);
+                    }
+
+                    // 新しく生成したフォームにもAJAXハンドラを付与
+                    row.querySelectorAll('.action-form').forEach(bindActionForm);
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('通信エラーが発生しました。');
+                });
+            });
+        }
+
+        // 初期表示時にすべてのアクションフォームへバインド
+        document.querySelectorAll('.action-form').forEach(bindActionForm);
+    });
+</script></body></html>
