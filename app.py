@@ -69,7 +69,7 @@ st.set_page_config(
     layout="centered",
 )
 
-# ====== 全体 CSS（スマホ向け＋小さめボタン用） ============
+# ====== 全体 CSS ======================================
 st.markdown(
     """
     <style>
@@ -77,20 +77,21 @@ st.markdown(
         font-size: 16px;
     }
 
-    .qual-card {
-        padding: 0.6rem 0.8rem 0.4rem;
-        margin-bottom: 0.3rem;
-        border-radius: 0.4rem;
+    /* 1枚のカード全体の見た目（資格情報＋ボタンをまとめて見せる箱） */
+    .qual-card-wrapper {
+        padding: 0.45rem 0.6rem 0.4rem;
+        margin-bottom: 0.45rem;
+        border-radius: 0.5rem;
         border: 1px solid #e0e0e0;
         background-color: #ffffff;
     }
 
-    /* 資格名を囲う黒太枠＋強調表示 */
+    /* 資格名の黒太枠 */
     .qual-name-box {
         border: 2px solid #000000;
         border-radius: 0.35rem;
-        padding: 0.3rem 0.5rem;
-        margin-bottom: 0.4rem;
+        padding: 0.25rem 0.5rem;
+        margin-bottom: 0.35rem;
         display: inline-block;
     }
     .qual-name-text {
@@ -100,31 +101,29 @@ st.markdown(
 
     .qual-meta {
         font-size: 0.9rem;
-        line-height: 1.5;
+        line-height: 1.4;
         margin-bottom: 0.2rem;
     }
 
-    /* ▼ 資格枠の中にボタンがあるように見せるためのラッパー */
+    /* カード下部のボタン行：テキストとボタンの間隔をかなり狭くする */
     .qual-card-btn-row {
-        margin-top: 0.1rem;      /* 資格情報との間を少しだけ空ける */
+        margin-top: 0.2rem;
     }
 
-    /* ▼ ボタンを今の「約半分」の大きさにする */
-    .stButton > button {
+    /* ▼ ボタンを今より小さく（おおよそ半分） */
+    .qual-card-wrapper .stButton > button {
         white-space: nowrap;
-        font-size: 0.6rem;         /* 文字サイズをかなり小さく */
-        padding: 0.15rem 0.3rem;   /* 余白も少なく */
+        font-size: 0.6rem;          /* 文字を小さく */
+        padding: 0.15rem 0.35rem;   /* 余白も小さく */
         background-color: #e3f2fd;
         color: #0d47a1;
         border: 1px solid #90caf9;
         border-radius: 0.25rem;
-
-        width: auto;          /* カラム幅いっぱいには広げない */
+        width: 100%;                /* カラム幅の中で横に広げる */
         min-width: 0;
-        max-width: 100%;
         box-sizing: border-box;
     }
-    .stButton > button:hover {
+    .qual-card-wrapper .stButton > button:hover {
         background-color: #bbdefb;
         color: #0d47a1;
         border-color: #64b5f6;
@@ -142,6 +141,12 @@ st.markdown(
         font-size: 0.8rem;
         color: #555555;
         margin-bottom: 0.1rem;
+    }
+
+    /* Streamlit の各カードコンテナに枠デザインを適用するためのラッパ */
+    .card-root {
+        padding: 0;
+        margin: 0;
     }
     </style>
     """,
@@ -329,6 +334,103 @@ acquired_records_filtered = filter_records(acquired_records)
 superior_records_filtered = filter_records(superior_records)
 
 # =========================================================
+#  カード描画用の共通処理
+# =========================================================
+def render_qual_card(rec, mode: str):
+    """
+    mode: "unacquired" / "acquired" / "superior"
+    """
+    idx = rec["id"]
+    qual_name = rec.get("資格名", "")
+    rank = rec.get("ランク", "")
+    kubun = rec.get("区分", "")
+    money = rec.get("金額", "")
+
+    # 1枚のカードを表すコンテナ
+    with st.container():
+        # 外側枠（資格情報部）
+        st.markdown(
+            f"""
+            <div class="card-root"><div class="qual-card-wrapper"><div class="qual-name-box"><span class="qual-name-text">{qual_name}</span></div><div class="qual-meta">
+                    ランク: {rank}<br>
+                    区分: {kubun}<br>
+                    金額: {money}
+                </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        # ▼ ボタン行（同じ card-wrapper の一部分に見せる）
+        # ここで Streamlit の都合により実際の DOM としては別 div になりますが、
+        # CSS で padding / margin を調整して「同じ箱の中」に見えるようにしています。
+        btn_row = st.container()
+        with btn_row:
+            st.markdown('<div class="qual-card-btn-row">', unsafe_allow_html=True)
+            col1, col2 = st.columns(2, gap="small")
+
+            if mode == "unacquired":
+                with col1:
+                    if st.button("取得", key=f"acquire_{idx}"):
+                        acquired_ids = st.session_state.acquired_ids
+                        superior_ids = st.session_state.superior_ids
+                        acquired_ids.add(idx)
+                        if idx in superior_ids:
+                            superior_ids.discard(idx)
+                        st.session_state.acquired_ids = acquired_ids
+                        st.session_state.superior_ids = superior_ids
+                        st.rerun()
+                with col2:
+                    if st.button("上位互換取得", key=f"acquire_superior_{idx}"):
+                        acquired_ids = st.session_state.acquired_ids
+                        superior_ids = st.session_state.superior_ids
+                        acquired_ids.add(idx)
+                        superior_ids.add(idx)
+                        st.session_state.acquired_ids = acquired_ids
+                        st.session_state.superior_ids = superior_ids
+                        st.rerun()
+
+            elif mode == "acquired":
+                with col1:
+                    if st.button("取得解除", key=f"unacquire_{idx}"):
+                        acquired_ids = st.session_state.acquired_ids
+                        superior_ids = st.session_state.superior_ids
+                        if idx in acquired_ids:
+                            acquired_ids.remove(idx)
+                        if idx in superior_ids:
+                            superior_ids.remove(idx)
+                        st.session_state.acquired_ids = acquired_ids
+                        st.session_state.superior_ids = superior_ids
+                        st.rerun()
+                with col2:
+                    if st.button("上位互換取得に変更", key=f"set_superior_{idx}"):
+                        acquired_ids = st.session_state.acquired_ids
+                        superior_ids = st.session_state.superior_ids
+                        acquired_ids.add(idx)
+                        superior_ids.add(idx)
+                        st.session_state.acquired_ids = acquired_ids
+                        st.session_state.superior_ids = superior_ids
+                        st.rerun()
+
+            elif mode == "superior":
+                # 上位互換解除のみ
+                with col1:
+                    if st.button("上位互換フラグ解除", key=f"unset_superior_{idx}"):
+                        superior_ids = st.session_state.superior_ids
+                        if idx in superior_ids:
+                            superior_ids.remove(idx)
+                        st.session_state.superior_ids = superior_ids
+                        st.rerun()
+                # 右側カラムをダミーとして空けておく
+                with col2:
+                    st.write("")
+
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        # 外側枠の閉じタグ（視覚的な一体化のためにここで閉じています）
+        st.markdown("</div></div>", unsafe_allow_html=True)
+
+
+# =========================================================
 #  未取得の資格
 # =========================================================
 if st.session_state.show_unacquired:
@@ -338,45 +440,7 @@ if st.session_state.show_unacquired:
         st.info("条件に合致する未取得の資格はありません。")
     else:
         for rec in remaining_records_filtered:
-            idx = rec["id"]
-            qual_name = rec.get("資格名", "")
-            rank = rec.get("ランク", "")
-            kubun = rec.get("区分", "")
-            money = rec.get("金額", "")
-
-            card = st.container()
-            with card:
-                # ▼ 資格枠（情報部分）
-                st.markdown(
-                    f'''
-                    <div class="qual-card"><div class="qual-name-box"><span class="qual-name-text">{qual_name}</span></div><div class="qual-meta">
-                            ランク: {rank}<br>
-                            区分: {kubun}<br>
-                            金額: {money}
-                        </div><!-- この後のボタンを枠の中に見せるためのラッパー --><div class="qual-card-btn-row"></div></div>
-                    ''',
-                    unsafe_allow_html=True
-                )
-
-                # ▼ 実際のボタン（見た目としては枠の中の下側に並ぶ）
-                btn_col1, btn_col2 = st.columns(2, gap="small")
-                with btn_col1:
-                    if st.button("取得", key=f"acquire_{idx}"):
-                        acquired_ids.add(idx)
-                        if idx in superior_ids:
-                            superior_ids.discard(idx)
-                        st.session_state.acquired_ids = acquired_ids
-                        st.session_state.superior_ids = superior_ids
-                        st.rerun()
-                with btn_col2:
-                    if st.button("上位互換取得", key=f"acquire_superior_{idx}"):
-                        acquired_ids.add(idx)
-                        superior_ids.add(idx)
-                        st.session_state.acquired_ids = acquired_ids
-                        st.session_state.superior_ids = superior_ids
-                        st.rerun()
-
-    st.markdown("")
+            render_qual_card(rec, mode="unacquired")
 
 # =========================================================
 #  取得済み（上位互換はまだ）
@@ -388,44 +452,7 @@ if st.session_state.show_acquired:
         st.info("条件に合致する『取得済み（上位互換はまだ）』の資格はありません。")
     else:
         for rec in acquired_records_filtered:
-            idx = rec["id"]
-            qual_name = rec.get("資格名", "")
-            rank = rec.get("ランク", "")
-            kubun = rec.get("区分", "")
-            money = rec.get("金額", "")
-
-            card = st.container()
-            with card:
-                st.markdown(
-                    f'''
-                    <div class="qual-card"><div class="qual-name-box"><span class="qual-name-text">{qual_name}</span></div><div class="qual-meta">
-                            ランク: {rank}<br>
-                            区分: {kubun}<br>
-                            金額: {money}
-                        </div><div class="qual-card-btn-row"></div></div>
-                    ''',
-                    unsafe_allow_html=True
-                )
-
-                btn_col1, btn_col2 = st.columns(2, gap="small")
-                with btn_col1:
-                    if st.button("取得解除", key=f"unacquire_{idx}"):
-                        if idx in acquired_ids:
-                            acquired_ids.remove(idx)
-                        if idx in superior_ids:
-                            superior_ids.remove(idx)
-                        st.session_state.acquired_ids = acquired_ids
-                        st.session_state.superior_ids = superior_ids
-                        st.rerun()
-                with btn_col2:
-                    if st.button("上位互換取得に変更", key=f"set_superior_{idx}"):
-                        acquired_ids.add(idx)
-                        superior_ids.add(idx)
-                        st.session_state.acquired_ids = acquired_ids
-                        st.session_state.superior_ids = superior_ids
-                        st.rerun()
-
-    st.markdown("")
+            render_qual_card(rec, mode="acquired")
 
 # =========================================================
 #  上位互換を取得済みの資格
@@ -437,27 +464,4 @@ if st.session_state.show_superior:
         st.info("条件に合致する『上位互換を取得済み』の資格はありません。")
     else:
         for rec in superior_records_filtered:
-            idx = rec["id"]
-            qual_name = rec.get("資格名", "")
-            rank = rec.get("ランク", "")
-            kubun = rec.get("区分", "")
-            money = rec.get("金額", "")
-
-            card = st.container()
-            with card:
-                st.markdown(
-                    f'''
-                    <div class="qual-card"><div class="qual-name-box"><span class="qual-name-text">{qual_name}</span></div><div class="qual-meta">
-                            ランク: {rank}<br>
-                            区分: {kubun}<br>
-                            金額: {money}
-                        </div><div class="qual-card-btn-row"></div></div>
-                    ''',
-                    unsafe_allow_html=True
-                )
-
-                if st.button("上位互換フラグ解除", key=f"unset_superior_{idx}"):
-                    if idx in superior_ids:
-                        superior_ids.remove(idx)
-                    st.session_state.superior_ids = superior_ids
-                    st.rerun()
+            render_qual_card(rec, mode="superior")
