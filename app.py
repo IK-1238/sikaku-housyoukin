@@ -86,6 +86,14 @@ st.markdown(
         background-color: #ffffff;
     }
 
+    /* 資格カード同士の区切り線 */
+    .qual-card-separator {
+        border: none;
+        border-top: 1px solid #cccccc;
+        margin: 0.4rem 0;
+        width: 100%;
+    }
+
     /* 資格名の黒太枠 */
     .qual-name-box {
         border: 2px solid #000000;
@@ -111,18 +119,18 @@ st.markdown(
         margin-bottom: 0.1rem;
     }
 
-    /* ▼ ボタンのデザイン（かなり薄い青 + さらに小さめサイズ＆同じ大きさ） */
+    /* ▼ ボタンのデザイン（かなり薄い青 + 小さめサイズ＆同じ幅） */
     .stButton > button {
         white-space: nowrap;
-        font-size: 0.55rem;          /* 文字さらに小さめ */
-        padding: 0.1rem 0.25rem;     /* 余白さらに少なめ */
+        font-size: 0.55rem;          /* 文字小さめ */
+        padding: 0.1rem 0.25rem;     /* 余白少なめ */
         background-color: #e8f4ff;   /* かなり薄い青 */
         color: #0d47a1;
         border: 1px solid #bcdfff;
         border-radius: 0.25rem;
-        width: 100%;                 /* カラム／コンテナの幅いっぱいに */
-        min-width: 0;
-        min-height: 1.4rem;          /* 高さをそろえるための下限値 */
+        width: 9rem;                 /* 取得ボタンと上位互換取得ボタンの幅をそろえる */
+        min-width: 9rem;             /* 同じ幅を維持 */
+        min-height: 1.4rem;          /* 高さの下限値（そろえ用） */
         box-sizing: border-box;
         display: block;
     }
@@ -157,7 +165,7 @@ st.markdown(
 
 # ====== タイトル ======================================
 st.markdown(
-    "<h1>資格報奨金 管理アプリ（Streamlit 版）</h1>",
+    "<h1>資格報奨金</h1>",
     unsafe_allow_html=True
 )
 
@@ -348,6 +356,9 @@ def render_qual_card(rec, mode: str):
     kubun = rec.get("区分", "")
     money = rec.get("金額", "")
 
+    # ▼ 各資格カードの「上」に横線
+    st.markdown('<hr class="qual-card-separator">', unsafe_allow_html=True)
+
     with st.container():
         # 資格情報の枠
         st.markdown(
@@ -361,7 +372,7 @@ def render_qual_card(rec, mode: str):
             unsafe_allow_html=True
         )
 
-        # ▼ ボタン行（枠のすぐ下・縦並び）
+        # ▼ ボタン行（縦並び）
         st.markdown('<div class="qual-card-btn-row">', unsafe_allow_html=True)
 
         if mode == "unacquired":
@@ -414,6 +425,9 @@ def render_qual_card(rec, mode: str):
                 st.rerun()
 
         st.markdown("</div>", unsafe_allow_html=True)
+
+    # ▼ 各資格カードの「下」（最後のボタンの下）に横線
+    st.markdown('<hr class="qual-card-separator">', unsafe_allow_html=True)
 
 
 # =========================================================
