@@ -359,10 +359,10 @@ if st.session_state.show_unacquired:
 #  取得済み（上位互換はまだ）
 # =========================================================
 if st.session_state.show_acquired:
-    st.subheader("取得済み（上位互換はまだ）の資格")
+    st.subheader("取得済みの資格")
 
     if not acquired_records_filtered:
-        st.info("条件に合致する『取得済み（上位互換はまだ）』の資格はありません。")
+        st.info("条件に合致する『取得済み』の資格はありません。")
     else:
         for rec in acquired_records_filtered:
             idx = rec["id"]
