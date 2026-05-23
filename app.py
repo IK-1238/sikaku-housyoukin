@@ -151,7 +151,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.title("資格報奨金 管理アプリ（Streamlit 版）")
+st.title("資格報奨金")
 
 # ==== ログイン済みのときだけ、右上にログアウトボタンを表示 ====
 if st.session_state.authenticated:
