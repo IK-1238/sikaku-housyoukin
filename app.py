@@ -1,20 +1,20 @@
 import streamlit as st
 import pandas as pd
- 
+
 # ==== 設定 ============================================
 EXCEL_PATH = "資格報奨金_まとめ.xlsx"
 PASSWORD = "SIyu0207ike&"
 # =====================================================
- 
- 
+
+
 def parse_money_to_man(yen_str: str) -> int:
     s = str(yen_str)
     s = s.replace("万円", "").replace("万", "").replace("円", "").replace(",", "")
     if s == "" or s.lower() == "nan":
         return 0
     return int(s)
- 
- 
+
+
 def load_data():
     df = pd.read_excel(EXCEL_PATH)
     df = df.rename(columns={
@@ -22,30 +22,30 @@ def load_data():
     })
     df = df.reset_index(drop=True)
     df["id"] = df.index
- 
+
     rank_list = sorted(df["ランク"].dropna().unique())
     kubun_list = sorted(df["区分"].dropna().unique())
     return df, rank_list, kubun_list
- 
- 
+
+
 # ====== セッション状態初期化 =========================
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
- 
+
 if "acquired_ids" not in st.session_state:
     st.session_state.acquired_ids = set()
- 
+
 if "superior_ids" not in st.session_state:
     st.session_state.superior_ids = set()
- 
- 
+
+
 def reset_login_state(clear_data: bool = False):
     st.session_state.authenticated = False
     if clear_data:
         st.session_state.acquired_ids = set()
         st.session_state.superior_ids = set()
- 
- 
+
+
 # ====== ページ設定（スマホ向けに中央寄せ）============
 st.set_page_config(
     page_title="資格報奨金 管理アプリ",
@@ -60,6 +60,7 @@ st.markdown(
     html, body, [class*="css"]  {
         font-size: 16px;
     }
+
     .qual-card {
         padding: 0.6rem 0.8rem;
         margin-bottom: 0.4rem;
@@ -67,11 +68,41 @@ st.markdown(
         border: 1px solid #e0e0e0;
         background-color: #ffffff;
     }
+
+    /* 資格名を囲う黒太枠＋強調表示 */
+    .qual-name-box {
+        border: 2px solid #000000;
+        border-radius: 0.35rem;
+        padding: 0.3rem 0.5rem;
+        margin-bottom: 0.4rem;
+        display: inline-block;
+    }
+    .qual-name-text {
+        font-weight: 800;
+        font-size: 1.05rem;
+    }
+
+    .qual-meta {
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+
+    /* ボタンを薄い青色に統一（ログイン/ログアウト等も含めて全ボタン共通） */
     .stButton > button {
         white-space: nowrap;
         font-size: 0.9rem;
         padding: 0.25rem 0.6rem;
+        background-color: #e3f2fd;   /* かなり薄い青色 */
+        color: #0d47a1;
+        border: 1px solid #90caf9;
+        border-radius: 0.35rem;
     }
+    .stButton > button:hover {
+        background-color: #bbdefb;
+        color: #0d47a1;
+        border-color: #64b5f6;
+    }
+
     h2, h3 {
         margin-top: 0.8rem;
         margin-bottom: 0.4rem;
@@ -85,13 +116,13 @@ st.markdown(
 )
 
 st.title("資格報奨金 管理アプリ（Streamlit 版）")
- 
+
 # ---- ログイン画面 ----
 if not st.session_state.authenticated:
     st.markdown("### ログイン")
     st.write("パスワードを入力してください。")
     password_input = st.text_input("パスワード", type="password")
- 
+
     col_login1, col_login2 = st.columns([1, 3])
     with col_login1:
         if st.button("ログイン", use_container_width=True):
@@ -102,9 +133,9 @@ if not st.session_state.authenticated:
             else:
                 st.session_state.authenticated = False
                 st.error("パスワードが違います。")
- 
+
     st.stop()
- 
+
 # ---- ログイン後 ----
 top_col1, top_col2 = st.columns(2)
 with top_col1:
@@ -116,24 +147,24 @@ with top_col2:
         st.session_state.acquired_ids = set()
         st.session_state.superior_ids = set()
         st.success("取得状況をリセットしました。")
- 
+
 st.markdown("---")
- 
+
 # ---- データ読込 ----
 try:
     df, rank_list, kubun_list = load_data()
 except FileNotFoundError:
     st.error(f"Excel ファイルが見つかりませんでした: {EXCEL_PATH}")
     st.stop()
- 
+
 acquired_ids = st.session_state.acquired_ids
 superior_ids = st.session_state.superior_ids
- 
+
 records = df.to_dict(orient="records")
 remaining_records = []
 acquired_records = []
 superior_records = []
- 
+
 for rec in records:
     idx = rec["id"]
     if idx in acquired_ids:
@@ -143,7 +174,7 @@ for rec in records:
             acquired_records.append(rec)
     else:
         remaining_records.append(rec)
- 
+
 # ---- サイドバー（検索UI） ----
 st.sidebar.header("検索・フィルタ")
 
@@ -172,8 +203,8 @@ selected_kubun = st.sidebar.multiselect(
     options=kubun_list,
     default=[],
 )
- 
- 
+
+
 def match_freeword(rec: dict, keyword: str) -> bool:
     if not keyword:
         return True
@@ -186,8 +217,8 @@ def match_freeword(rec: dict, keyword: str) -> bool:
     ]
     text = " ".join(fields).lower()
     return k in text
- 
- 
+
+
 def filter_records(rec_list):
     filtered = []
     for r in rec_list:
@@ -210,17 +241,17 @@ def filter_records(rec_list):
 
         filtered.append(r)
     return filtered
- 
- 
+
+
 remaining_records_filtered = filter_records(remaining_records)
 acquired_records_filtered = filter_records(acquired_records)
 superior_records_filtered = filter_records(superior_records)
- 
+
 # =========================================================
 #  未取得の資格
 # =========================================================
 st.subheader("未取得の資格")
- 
+
 if not remaining_records_filtered:
     st.info("条件に合致する未取得の資格はありません。")
 else:
@@ -230,16 +261,22 @@ else:
         rank = rec.get("ランク", "")
         kubun = rec.get("区分", "")
         money = rec.get("金額", "")
- 
+
         card = st.container()
         with card:
+            # 資格名を黒太枠＋強調、ランク/区分/金額は1行ずつ
             st.markdown(
-                f'<div class="qual-card">'
-                f'<b>{qual_name}</b><br>'
-                f'ランク: {rank}　区分: {kubun}　金額: {money}'
-                f'</div>',
+                f'''
+                <div class="qual-card"><div class="qual-name-box"><span class="qual-name-text">{qual_name}</span></div><div class="qual-meta">
+                        ランク: {rank}<br>
+                        区分: {kubun}<br>
+                        金額: {money}
+                    </div></div>
+                ''',
                 unsafe_allow_html=True
             )
+
+            # 取得 / 上位互換 ボタンを横並び（columnsで2等分）
             btn_col1, btn_col2 = st.columns(2)
             with btn_col1:
                 if st.button("取得", key=f"acquire_{idx}", use_container_width=True):
@@ -256,14 +293,14 @@ else:
                     st.session_state.acquired_ids = acquired_ids
                     st.session_state.superior_ids = superior_ids
                     st.rerun()
- 
+
 st.markdown("")
- 
+
 # =========================================================
 #  取得済み（上位互換はまだ）
 # =========================================================
 st.subheader("取得済み（上位互換はまだ）の資格")
- 
+
 if not acquired_records_filtered:
     st.info("条件に合致する『取得済み（上位互換はまだ）』の資格はありません。")
 else:
@@ -273,16 +310,20 @@ else:
         rank = rec.get("ランク", "")
         kubun = rec.get("区分", "")
         money = rec.get("金額", "")
- 
+
         card = st.container()
         with card:
             st.markdown(
-                f'<div class="qual-card">'
-                f'<b>{qual_name}</b><br>'
-                f'ランク: {rank}　区分: {kubun}　金額: {money}'
-                f'</div>',
+                f'''
+                <div class="qual-card"><div class="qual-name-box"><span class="qual-name-text">{qual_name}</span></div><div class="qual-meta">
+                        ランク: {rank}<br>
+                        区分: {kubun}<br>
+                        金額: {money}
+                    </div></div>
+                ''',
                 unsafe_allow_html=True
             )
+
             btn_col1, btn_col2 = st.columns(2)
             with btn_col1:
                 if st.button("取得解除", key=f"unacquire_{idx}", use_container_width=True):
@@ -300,14 +341,14 @@ else:
                     st.session_state.acquired_ids = acquired_ids
                     st.session_state.superior_ids = superior_ids
                     st.rerun()
- 
+
 st.markdown("")
- 
+
 # =========================================================
 #  上位互換を取得済みの資格
 # =========================================================
 st.subheader("上位互換を取得済みの資格")
- 
+
 if not superior_records_filtered:
     st.info("条件に合致する『上位互換を取得済み』の資格はありません。")
 else:
@@ -317,16 +358,20 @@ else:
         rank = rec.get("ランク", "")
         kubun = rec.get("区分", "")
         money = rec.get("金額", "")
- 
+
         card = st.container()
         with card:
             st.markdown(
-                f'<div class="qual-card">'
-                f'<b>{qual_name}</b><br>'
-                f'ランク: {rank}　区分: {kubun}　金額: {money}'
-                f'</div>',
+                f'''
+                <div class="qual-card"><div class="qual-name-box"><span class="qual-name-text">{qual_name}</span></div><div class="qual-meta">
+                        ランク: {rank}<br>
+                        区分: {kubun}<br>
+                        金額: {money}
+                    </div></div>
+                ''',
                 unsafe_allow_html=True
             )
+
             if st.button("上位互換フラグ解除", key=f"unset_superior_{idx}", use_container_width=True):
                 if idx in superior_ids:
                     superior_ids.remove(idx)
