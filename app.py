@@ -125,6 +125,27 @@ st.markdown(
         color: #555555;
         margin-bottom: 0.1rem;
     }
+
+     /* ログアウトボタン用 */
+    .logout-area {
+        display: flex;
+        justify-content: flex-end;   /* 右寄せ */
+        margin-top: -2.5rem;         /* タイトルに近づけるための微調整（必要に応じて調整） */
+        margin-bottom: 0.5rem;
+    }
+    .logout-area .stButton > button {
+        background-color: #f5f5f5;   /* 薄いグレー */
+        color: #424242;
+        border: 1px solid #bdbdbd;
+        font-size: 0.7rem;           /* 小さめ */
+        padding: 0.1rem 0.5rem;
+        border-radius: 0.3rem;
+    }
+    .logout-area .stButton > button:hover {
+        background-color: #e0e0e0;
+        border-color: #9e9e9e;
+    }
+    
     </style>
     """,
     unsafe_allow_html=True
@@ -175,37 +196,14 @@ if not st.session_state.authenticated:
     st.stop()
 
 # ---- ログイン後（右上に小さなログアウトボタン） ----
-# タイトル直下の右上に配置
-top_col1, top_col2 = st.columns([9, 1])
-with top_col1:
-    st.write("")  # タイトルとの間隔用
-with top_col2:
-    if st.button("ログアウト", use_container_width=True, key="logout_button"):
+with st.container():
+    st.markdown('<div class="logout-area">', unsafe_allow_html=True)
+    if st.button("ログアウト", key="logout_button"):
         reset_login_state(clear_data=False)
         st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# ログアウトボタンを「右上・小さめ・薄いグレー塗り」にするための JS/CSS 調整
-st.markdown(
-    """
-    <script>
-    window.addEventListener('load', function() {
-        const btns = window.parent.document.querySelectorAll('button');
-        btns.forEach(b => {
-            if (b.innerText === 'ログアウト') {
-                b.style.backgroundColor = '#f5f5f5';   // 薄いグレー
-                b.style.color = '#424242';
-                b.style.border = '1px solid #bdbdbd';
-                b.style.fontSize = '0.70rem';
-                b.style.padding = '0.10rem 0.35rem';
-                b.style.borderRadius = '0.3rem';
-            }
-        });
-    });
-    </script>
-    """,
-    unsafe_allow_html=True
-)
-
+st.markdown("---")
 st.markdown("---")
 
 # ---- データ読込 ----
