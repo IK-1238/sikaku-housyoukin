@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import json
 import os
+import streamlit.components.v1 as components  # ★ 追加
+
 
 # ==== 設定 ============================================
 EXCEL_PATH = "資格報奨金_まとめ.xlsx"
@@ -96,9 +98,9 @@ if "applied_ranks" not in st.session_state:
 if "applied_kubun" not in st.session_state:
     st.session_state.applied_kubun = []
 
-# サイドバーのエクスパンダー開閉状態（初期は開く）
-if "filter_expanded" not in st.session_state:
-    st.session_state.filter_expanded = True
+# サイドバーを閉じるかどうかのフラグ（JSを一度だけ動かす）
+if "close_sidebar" not in st.session_state:
+    st.session_state.close_sidebar = False
 
 
 def reset_login_state(clear_data: bool = False):
@@ -117,7 +119,6 @@ st.markdown(
         font-size: 16px;
     }
 
-    /* 1枚のカード全体の見た目（資格情報の枠） */
     .qual-card-wrapper {
         padding: 0.45rem 0.6rem 0.4rem;
         margin-bottom: 0.45rem;
@@ -126,7 +127,6 @@ st.markdown(
         background-color: #ffffff;
     }
 
-    /* 資格カード同士の区切り線（下側のみで使用） */
     .qual-card-separator {
         border: none;
         border-top: 1px solid #cccccc;
@@ -134,7 +134,6 @@ st.markdown(
         width: 100%;
     }
 
-    /* 資格名の黒太枠 */
     .qual-name-box {
         border: 2px solid #000000;
         border-radius: 0.35rem;
@@ -153,29 +152,27 @@ st.markdown(
         margin-bottom: 0.2rem;
     }
 
-    /* カード下部のボタン行：テキストとボタンの間隔を少しだけ */
     .qual-card-btn-row {
         margin-top: 0.3rem;
         margin-bottom: 0.1rem;
     }
 
-    /* ▼ ボタンのデザイン（かなり薄い青 + 小さめサイズ＆同じ幅） */
     .stButton > button {
         white-space: nowrap;
-        font-size: 0.55rem;          /* 文字小さめ */
-        padding: 0.1rem 0.25rem;     /* 余白少なめ */
-        background-color: #e8f4ff;   /* かなり薄い青 */
+        font-size: 0.55rem;
+        padding: 0.1rem 0.25rem;
+        background-color: #e8f4ff;
         color: #0d47a1;
         border: 1px solid #bcdfff;
         border-radius: 0.25rem;
-        width: 9rem;                 /* 取得ボタンと上位互換取得ボタンの幅をそろえる */
-        min-width: 9rem;             /* 同じ幅を維持 */
-        min-height: 1.4rem;          /* 高さの下限値（そろえ用） */
+        width: 9rem;
+        min-width: 9rem;
+        min-height: 1.4rem;
         box-sizing: border-box;
         display: block;
     }
     .stButton > button:hover {
-        background-color: #d7ecff;   /* 少し濃く */
+        background-color: #d7ecff;
         color: #0d47a1;
         border-color: #99cdff;
     }
@@ -205,11 +202,11 @@ st.markdown(
 
 # ====== タイトル ======================================
 st.markdown(
-    "<h1>資格報奨金</h1>",
+    "<h1>資格報奨金 管理アプリ（Streamlit 版）</h1>",
     unsafe_allow_html=True
 )
 
-# ==== タブ表示オン/オフ用チェックボックス ====
+# ==== ログイン前後での表示制御 ====
 if st.session_state.authenticated:
     st.markdown('<div class="tab-toggle-label">表示するタブを選択：</div>', unsafe_allow_html=True)
     tab_col1, tab_col2, tab_col3 = st.columns(3)
@@ -253,6 +250,31 @@ if not st.session_state.authenticated:
 
 st.markdown("---")
 
+# ★★ ここで「サイドバーを閉じるフラグ」が立っていたら JS を一度だけ実行 ★★
+if st.session_state.close_sidebar:
+    # サイドバーを閉じる（"Hide sidebar" ボタンをクリック）
+    components.html(
+        """
+        <script>
+        const interval = setInterval(() => {
+          const doc = window.parent.document;
+          const btn = doc.querySelector('button[title="Hide sidebar"]');
+          if (btn) {
+            if (!btn.dataset.clickedByScript) {
+              btn.click();
+              btn.dataset.clickedByScript = "1";
+            }
+            clearInterval(interval);
+          }
+        }, 100);
+        </script>
+        """,
+        height=0,
+        width=0,
+    )
+    # 1回実行したらオフにしておく
+    st.session_state.close_sidebar = False
+
 # ---- データ読込 ----
 try:
     df, rank_list, kubun_list = load_data()
@@ -279,60 +301,58 @@ for rec in records:
         remaining_records.append(rec)
 
 # ---- サイドバー（検索UI + 絞り込みボタン + ログアウト） ----
-# ここをエクスパンダーで囲み、絞り込みボタンで開閉を制御する
-with st.sidebar.expander("検索・フィルタ", expanded=st.session_state.filter_expanded):
-    st.subheader("フリーワード検索")
-    keyword_input = st.text_input(
-        "キーワード",
-        value=st.session_state.applied_keyword,
-        placeholder="例）IT パスポート, 技術士 など",
-        key="kw_input"
-    )
-    st.caption("※ 資格名・ランク・区分・金額から部分一致で検索します。")
+st.sidebar.subheader("フリーワード検索")
+keyword_input = st.sidebar.text_input(
+    "キーワード",
+    value=st.session_state.applied_keyword,
+    placeholder="例）IT パスポート, 技術士 など",
+    key="kw_input"
+)
+st.sidebar.caption("※ 資格名・ランク・区分・金額から部分一致で検索します。")
 
-    st.markdown("---")
+st.sidebar.markdown("---")
 
-    st.subheader("詳細条件")
+st.sidebar.subheader("詳細条件")
 
-    selected_ranks_input = st.multiselect(
-        "ランクを選択（複数可・未選択なら全件）",
-        options=rank_list,
-        default=st.session_state.applied_ranks,
-        key="rank_multi",
-    )
+selected_ranks_input = st.sidebar.multiselect(
+    "ランクを選択（複数可・未選択なら全件）",
+    options=rank_list,
+    default=st.session_state.applied_ranks,
+    key="rank_multi",
+)
 
-    selected_kubun_input = st.multiselect(
-        "区分を選択（複数可・未選択なら全件）",
-        options=kubun_list,
-        default=st.session_state.applied_kubun,
-        key="kubun_multi",
-    )
+selected_kubun_input = st.sidebar.multiselect(
+    "区分を選択（複数可・未選択なら全件）",
+    options=kubun_list,
+    default=st.session_state.applied_kubun,
+    key="kubun_multi",
+)
 
-    # === 絞り込みボタン & 絞り込み解除ボタン ===
-    btn_col1, btn_col2 = st.columns(2)
-    with btn_col1:
-        if st.button("絞り込み", key="do_filter_sidebar"):
-            # 入力中の値を「適用済み条件」として保存
-            st.session_state.applied_keyword = st.session_state.kw_input
-            st.session_state.applied_ranks = st.session_state.rank_multi
-            st.session_state.applied_kubun = st.session_state.kubun_multi
-            # 絞り込み後はエクスパンダーを閉じる
-            st.session_state.filter_expanded = False
-            st.rerun()
+# === 絞り込みボタン & 絞り込み解除ボタン ===
+btn_col1, btn_col2 = st.sidebar.columns(2)
+with btn_col1:
+    if st.button("絞り込み", key="do_filter_sidebar"):
+        # 入力中の値を「適用済み条件」として保存
+        st.session_state.applied_keyword = st.session_state.kw_input
+        st.session_state.applied_ranks = st.session_state.rank_multi
+        st.session_state.applied_kubun = st.session_state.kubun_multi
+        # ★ 絞り込み後にサイドバーを閉じるフラグを立てる
+        st.session_state.close_sidebar = True
+        st.rerun()
 
-    with btn_col2:
-        if st.button("絞り込み解除", key="clear_filter_sidebar"):
-            st.session_state.applied_keyword = ""
-            st.session_state.applied_ranks = []
-            st.session_state.applied_kubun = []
-            st.session_state.kw_input = ""
-            st.session_state.rank_multi = []
-            st.session_state.kubun_multi = []
-            # 条件解除時は再度エクスパンダーを開く
-            st.session_state.filter_expanded = True
-            st.rerun()
+with btn_col2:
+    if st.button("絞り込み解除", key="clear_filter_sidebar"):
+        st.session_state.applied_keyword = ""
+        st.session_state.applied_ranks = []
+        st.session_state.applied_kubun = []
+        st.session_state.kw_input = ""
+        st.session_state.rank_multi = []
+        st.session_state.kubun_multi = []
+        # 絞り込み解除時はサイドバーを開いたままにしておく（必要ならここで False をセット）
+        st.session_state.close_sidebar = False
+        st.rerun()
 
-# === ログアウトボタン（サイドバーの下に常時表示） ===
+# === ログアウトボタン（サイドバー下） ===
 st.sidebar.markdown("---")
 if st.session_state.authenticated:
     if st.sidebar.button("ログアウト", key="logout_sidebar"):
@@ -399,7 +419,6 @@ def render_qual_card(rec, mode: str):
     money = rec.get("金額", "")
 
     with st.container():
-        # 資格情報の枠
         st.markdown(
             f"""
             <div class="card-root"><div class="qual-card-wrapper"><div class="qual-name-box"><span class="qual-name-text">{qual_name}</span></div><div class="qual-meta">
@@ -411,7 +430,6 @@ def render_qual_card(rec, mode: str):
             unsafe_allow_html=True
         )
 
-        # ▼ ボタン行
         st.markdown('<div class="qual-card-btn-row">', unsafe_allow_html=True)
 
         if mode == "unacquired":
@@ -465,7 +483,6 @@ def render_qual_card(rec, mode: str):
                 superior_ids = st.session_state.superior_ids
                 if idx in superior_ids:
                     superior_ids.remove(idx)
-                # 「上位互換フラグ解除」なので、取得自体は残す
                 st.session_state.acquired_ids = acquired_ids
                 st.session_state.superior_ids = superior_ids
                 save_persisted_state(acquired_ids, superior_ids)
@@ -473,7 +490,6 @@ def render_qual_card(rec, mode: str):
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # ▼ 各資格カードの「下」（最後のボタンの下）に横線のみ表示
     st.markdown('<hr class="qual-card-separator">', unsafe_allow_html=True)
 
 
@@ -493,10 +509,10 @@ if st.session_state.show_unacquired:
 #  取得済み（上位互換はまだ）
 # =========================================================
 if st.session_state.show_acquired:
-    st.subheader("取得済みの資格")
+    st.subheader("取得済み（上位互換はまだ）の資格")
 
     if not acquired_records_filtered:
-        st.info("条件に合致する『取得済み』の資格はありません。")
+        st.info("条件に合致する『取得済み（上位互換はまだ）』の資格はありません。")
     else:
         for rec in acquired_records_filtered:
             render_qual_card(rec, mode="acquired")
