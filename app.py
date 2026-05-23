@@ -151,7 +151,7 @@ header_col1, header_col2 = st.columns([8, 2])
 with header_col1:
     # st.title の代わりに h1 を直接書くことで同じ行にレイアウト
     st.markdown(
-        "<h1>資格報奨金 管理アプリ（Streamlit 版）</h1>",
+        "<h1>資格報奨金 管理アプリ</h1>",
         unsafe_allow_html=True
     )
 
