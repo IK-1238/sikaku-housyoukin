@@ -1,9 +1,12 @@
 import streamlit as st
 import pandas as pd
+import json
+import os
 
 # ==== 設定 ============================================
 EXCEL_PATH = "資格報奨金_まとめ.xlsx"
 PASSWORD = "SIyu0207ike&"
+STATE_PATH = "qual_state.json"   # 取得状況を保存するファイル
 # =====================================================
 
 
@@ -28,15 +31,54 @@ def load_data():
     return df, rank_list, kubun_list
 
 
+# ====== 永続化（保存／読み込み）関連 ==================
+def load_persisted_state():
+    """
+    qual_state.json から acquired_ids / superior_ids を読み込む。
+    ファイルが無ければ空集合を返す。
+    """
+    if not os.path.exists(STATE_PATH):
+        return set(), set()
+
+    try:
+        with open(STATE_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        acquired = set(data.get("acquired_ids", []))
+        superior = set(data.get("superior_ids", []))
+        return acquired, superior
+    except Exception:
+        # 読み込み失敗時は空集合で開始
+        return set(), set()
+
+
+def save_persisted_state(acquired_ids: set, superior_ids: set):
+    """
+    acquired_ids / superior_ids を qual_state.json に保存する。
+    """
+    data = {
+        "acquired_ids": sorted(list(acquired_ids)),
+        "superior_ids": sorted(list(superior_ids)),
+    }
+    with open(STATE_PATH, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+# ====== ページ設定 ====================================
+st.set_page_config(
+    page_title="資格報奨金 管理アプリ",
+    page_icon="✅",
+    layout="centered",
+)
+
 # ====== セッション状態初期化 =========================
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
-if "acquired_ids" not in st.session_state:
-    st.session_state.acquired_ids = set()
-
-if "superior_ids" not in st.session_state:
-    st.session_state.superior_ids = set()
+# ここで永続化済みの状態を読み込む（初回だけ）
+if "acquired_ids" not in st.session_state or "superior_ids" not in st.session_state:
+    persisted_acquired, persisted_superior = load_persisted_state()
+    st.session_state.acquired_ids = persisted_acquired
+    st.session_state.superior_ids = persisted_superior
 
 # タブ表示オン/オフ用チェックボックス状態（デフォルトはすべて表示）
 if "show_unacquired" not in st.session_state:
@@ -60,14 +102,8 @@ def reset_login_state(clear_data: bool = False):
     if clear_data:
         st.session_state.acquired_ids = set()
         st.session_state.superior_ids = set()
+        save_persisted_state(st.session_state.acquired_ids, st.session_state.superior_ids)
 
-
-# ====== ページ設定 ====================================
-st.set_page_config(
-    page_title="資格報奨金 管理アプリ",
-    page_icon="✅",
-    layout="centered",
-)
 
 # ====== 全体 CSS ======================================
 st.markdown(
@@ -122,8 +158,8 @@ st.markdown(
     /* ▼ ボタンのデザイン（かなり薄い青 + 小さめサイズ＆同じ幅） */
     .stButton > button {
         white-space: nowrap;
-        font-size: 0.3rem;          /* 文字小さめ */
-        padding: 0.05rem 0.1rem;     /* 余白少なめ */
+        font-size: 0.55rem;          /* 文字小さめ */
+        padding: 0.1rem 0.25rem;     /* 余白少なめ */
         background-color: #e8f4ff;   /* かなり薄い青 */
         color: #0d47a1;
         border: 1px solid #bcdfff;
@@ -165,7 +201,7 @@ st.markdown(
 
 # ====== タイトル ======================================
 st.markdown(
-    "<h1>資格報奨金</h1>",
+    "<h1>資格報奨金 管理アプリ（Streamlit 版）</h1>",
     unsafe_allow_html=True
 )
 
@@ -356,8 +392,6 @@ def render_qual_card(rec, mode: str):
     kubun = rec.get("区分", "")
     money = rec.get("金額", "")
 
-    # ★ 上側の区切り線は削除（ここでは何もしない）
-
     with st.container():
         # 資格情報の枠
         st.markdown(
@@ -383,6 +417,7 @@ def render_qual_card(rec, mode: str):
                     superior_ids.discard(idx)
                 st.session_state.acquired_ids = acquired_ids
                 st.session_state.superior_ids = superior_ids
+                save_persisted_state(acquired_ids, superior_ids)
                 st.rerun()
 
             if st.button("上位互換取得", key=f"acquire_superior_{idx}"):
@@ -392,6 +427,7 @@ def render_qual_card(rec, mode: str):
                 superior_ids.add(idx)
                 st.session_state.acquired_ids = acquired_ids
                 st.session_state.superior_ids = superior_ids
+                save_persisted_state(acquired_ids, superior_ids)
                 st.rerun()
 
         elif mode == "acquired":
@@ -404,6 +440,7 @@ def render_qual_card(rec, mode: str):
                     superior_ids.remove(idx)
                 st.session_state.acquired_ids = acquired_ids
                 st.session_state.superior_ids = superior_ids
+                save_persisted_state(acquired_ids, superior_ids)
                 st.rerun()
 
             if st.button("上位互換取得に変更", key=f"set_superior_{idx}"):
@@ -413,14 +450,19 @@ def render_qual_card(rec, mode: str):
                 superior_ids.add(idx)
                 st.session_state.acquired_ids = acquired_ids
                 st.session_state.superior_ids = superior_ids
+                save_persisted_state(acquired_ids, superior_ids)
                 st.rerun()
 
         elif mode == "superior":
             if st.button("上位互換フラグ解除", key=f"unset_superior_{idx}"):
+                acquired_ids = st.session_state.acquired_ids
                 superior_ids = st.session_state.superior_ids
                 if idx in superior_ids:
                     superior_ids.remove(idx)
+                # 「上位互換フラグ解除」なので、取得自体は残す
+                st.session_state.acquired_ids = acquired_ids
                 st.session_state.superior_ids = superior_ids
+                save_persisted_state(acquired_ids, superior_ids)
                 st.rerun()
 
         st.markdown("</div>", unsafe_allow_html=True)
@@ -445,10 +487,10 @@ if st.session_state.show_unacquired:
 #  取得済み（上位互換はまだ）
 # =========================================================
 if st.session_state.show_acquired:
-    st.subheader("取得済みの資格")
+    st.subheader("取得済み（上位互換はまだ）の資格")
 
     if not acquired_records_filtered:
-        st.info("条件に合致する『取得済み』の資格はありません。")
+        st.info("条件に合致する『取得済み（上位互換はまだ）』の資格はありません。")
     else:
         for rec in acquired_records_filtered:
             render_qual_card(rec, mode="acquired")
