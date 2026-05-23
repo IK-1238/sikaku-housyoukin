@@ -103,17 +103,20 @@ st.markdown(
         line-height: 1.5;
     }
 
-    /* 通常ボタンを薄い青色に統一＆スマホ横並びしやすい幅に調整 */
+    /* ボタン：スマホでも2つが横並びになりやすいように小さめ＆幅auto */
     .stButton > button {
         white-space: nowrap;
-        font-size: 0.9rem;
-        padding: 0.3rem 0.4rem;      /* 少しコンパクトに */
-        background-color: #e3f2fd;   /* かなり薄い青色 */
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+        background-color: #e3f2fd;   /* 薄い青色 */
         color: #0d47a1;
         border: 1px solid #90caf9;
         border-radius: 0.35rem;
-        width: 100%;                 /* カラム幅いっぱいに */
-        box-sizing: border-box;      /* はみ出さないように */
+
+        width: auto;          /* カラム幅いっぱいにしない */
+        min-width: 0;         /* 極力小さくなることを許可 */
+        max-width: 100%;      /* はみ出さない */
+        box-sizing: border-box;
     }
     .stButton > button:hover {
         background-color: #bbdefb;
@@ -177,7 +180,7 @@ if not st.session_state.authenticated:
 
     col_login1, col_login2 = st.columns([1, 3])
     with col_login1:
-        if st.button("ログイン", use_container_width=True):
+        if st.button("ログイン"):
             if password_input == PASSWORD:
                 st.session_state.authenticated = True
                 st.success("ログインに成功しました。")
@@ -356,10 +359,10 @@ if st.session_state.show_unacquired:
                     unsafe_allow_html=True
                 )
 
-                # 取得 / 上位互換 ボタンを横並び（スマホでも横並びになりやすいよう調整）
+                # 取得 / 上位互換 ボタンを横並び
                 btn_col1, btn_col2 = st.columns(2, gap="small")
                 with btn_col1:
-                    if st.button("取得", key=f"acquire_{idx}", use_container_width=True):
+                    if st.button("取得", key=f"acquire_{idx}"):
                         acquired_ids.add(idx)
                         if idx in superior_ids:
                             superior_ids.discard(idx)
@@ -367,7 +370,7 @@ if st.session_state.show_unacquired:
                         st.session_state.superior_ids = superior_ids
                         st.rerun()
                 with btn_col2:
-                    if st.button("上位互換", key=f"acquire_superior_{idx}", use_container_width=True):
+                    if st.button("上位互換", key=f"acquire_superior_{idx}"):
                         acquired_ids.add(idx)
                         superior_ids.add(idx)
                         st.session_state.acquired_ids = acquired_ids
@@ -407,7 +410,7 @@ if st.session_state.show_acquired:
 
                 btn_col1, btn_col2 = st.columns(2, gap="small")
                 with btn_col1:
-                    if st.button("取得解除", key=f"unacquire_{idx}", use_container_width=True):
+                    if st.button("取得解除", key=f"unacquire_{idx}"):
                         if idx in acquired_ids:
                             acquired_ids.remove(idx)
                         if idx in superior_ids:
@@ -416,7 +419,7 @@ if st.session_state.show_acquired:
                         st.session_state.superior_ids = superior_ids
                         st.rerun()
                 with btn_col2:
-                    if st.button("上位互換に変更", key=f"set_superior_{idx}", use_container_width=True):
+                    if st.button("上位互換に変更", key=f"set_superior_{idx}"):
                         acquired_ids.add(idx)
                         superior_ids.add(idx)
                         st.session_state.acquired_ids = acquired_ids
@@ -454,7 +457,7 @@ if st.session_state.show_superior:
                     unsafe_allow_html=True
                 )
 
-                if st.button("上位互換フラグ解除", key=f"unset_superior_{idx}", use_container_width=True):
+                if st.button("上位互換フラグ解除", key=f"unset_superior_{idx}"):
                     if idx in superior_ids:
                         superior_ids.remove(idx)
                     st.session_state.superior_ids = superior_ids
