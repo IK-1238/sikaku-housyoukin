@@ -111,21 +111,23 @@ st.markdown(
         margin-bottom: 0.1rem;
     }
 
-    /* ▼ ボタンのデザイン（かなり薄い青 + 小さめサイズ） */
+    /* ▼ ボタンのデザイン（かなり薄い青 + さらに小さめサイズ＆同じ大きさ） */
     .stButton > button {
         white-space: nowrap;
-        font-size: 0.6rem;          /* 文字小さめ */
-        padding: 0.15rem 0.35rem;   /* 余白少なめ */
-        background-color: #e8f4ff;  /* かなり薄い青 */
+        font-size: 0.55rem;          /* 文字さらに小さめ */
+        padding: 0.1rem 0.25rem;     /* 余白さらに少なめ */
+        background-color: #e8f4ff;   /* かなり薄い青 */
         color: #0d47a1;
         border: 1px solid #bcdfff;
         border-radius: 0.25rem;
-        width: 100%;                /* 各カラムの幅いっぱいに */
+        width: 100%;                 /* カラム／コンテナの幅いっぱいに */
         min-width: 0;
+        min-height: 1.4rem;          /* 高さをそろえるための下限値 */
         box-sizing: border-box;
+        display: block;
     }
     .stButton > button:hover {
-        background-color: #d7ecff;  /* 少し濃く */
+        background-color: #d7ecff;   /* 少し濃く */
         color: #0d47a1;
         border-color: #99cdff;
     }
@@ -359,63 +361,57 @@ def render_qual_card(rec, mode: str):
             unsafe_allow_html=True
         )
 
-        # ▼ ボタン行（枠のすぐ下・横並び）
+        # ▼ ボタン行（枠のすぐ下・縦並び）
         st.markdown('<div class="qual-card-btn-row">', unsafe_allow_html=True)
-        col1, col2 = st.columns(2, gap="small")
 
         if mode == "unacquired":
-            with col1:
-                if st.button("取得", key=f"acquire_{idx}"):
-                    acquired_ids = st.session_state.acquired_ids
-                    superior_ids = st.session_state.superior_ids
-                    acquired_ids.add(idx)
-                    if idx in superior_ids:
-                        superior_ids.discard(idx)
-                    st.session_state.acquired_ids = acquired_ids
-                    st.session_state.superior_ids = superior_ids
-                    st.rerun()
-            with col2:
-                if st.button("上位互換取得", key=f"acquire_superior_{idx}"):
-                    acquired_ids = st.session_state.acquired_ids
-                    superior_ids = st.session_state.superior_ids
-                    acquired_ids.add(idx)
-                    superior_ids.add(idx)
-                    st.session_state.acquired_ids = acquired_ids
-                    st.session_state.superior_ids = superior_ids
-                    st.rerun()
+            if st.button("取得", key=f"acquire_{idx}"):
+                acquired_ids = st.session_state.acquired_ids
+                superior_ids = st.session_state.superior_ids
+                acquired_ids.add(idx)
+                if idx in superior_ids:
+                    superior_ids.discard(idx)
+                st.session_state.acquired_ids = acquired_ids
+                st.session_state.superior_ids = superior_ids
+                st.rerun()
+
+            if st.button("上位互換取得", key=f"acquire_superior_{idx}"):
+                acquired_ids = st.session_state.acquired_ids
+                superior_ids = st.session_state.superior_ids
+                acquired_ids.add(idx)
+                superior_ids.add(idx)
+                st.session_state.acquired_ids = acquired_ids
+                st.session_state.superior_ids = superior_ids
+                st.rerun()
 
         elif mode == "acquired":
-            with col1:
-                if st.button("取得解除", key=f"unacquire_{idx}"):
-                    acquired_ids = st.session_state.acquired_ids
-                    superior_ids = st.session_state.superior_ids
-                    if idx in acquired_ids:
-                        acquired_ids.remove(idx)
-                    if idx in superior_ids:
-                        superior_ids.remove(idx)
-                    st.session_state.acquired_ids = acquired_ids
-                    st.session_state.superior_ids = superior_ids
-                    st.rerun()
-            with col2:
-                if st.button("上位互換取得に変更", key=f"set_superior_{idx}"):
-                    acquired_ids = st.session_state.acquired_ids
-                    superior_ids = st.session_state.superior_ids
-                    acquired_ids.add(idx)
-                    superior_ids.add(idx)
-                    st.session_state.acquired_ids = acquired_ids
-                    st.session_state.superior_ids = superior_ids
-                    st.rerun()
+            if st.button("取得解除", key=f"unacquire_{idx}"):
+                acquired_ids = st.session_state.acquired_ids
+                superior_ids = st.session_state.superior_ids
+                if idx in acquired_ids:
+                    acquired_ids.remove(idx)
+                if idx in superior_ids:
+                    superior_ids.remove(idx)
+                st.session_state.acquired_ids = acquired_ids
+                st.session_state.superior_ids = superior_ids
+                st.rerun()
+
+            if st.button("上位互換取得に変更", key=f"set_superior_{idx}"):
+                acquired_ids = st.session_state.acquired_ids
+                superior_ids = st.session_state.superior_ids
+                acquired_ids.add(idx)
+                superior_ids.add(idx)
+                st.session_state.acquired_ids = acquired_ids
+                st.session_state.superior_ids = superior_ids
+                st.rerun()
 
         elif mode == "superior":
-            with col1:
-                if st.button("上位互換フラグ解除", key=f"unset_superior_{idx}"):
-                    superior_ids = st.session_state.superior_ids
-                    if idx in superior_ids:
-                        superior_ids.remove(idx)
-                    st.session_state.superior_ids = superior_ids
-                    st.rerun()
-            with col2:
-                st.write("")
+            if st.button("上位互換フラグ解除", key=f"unset_superior_{idx}"):
+                superior_ids = st.session_state.superior_ids
+                if idx in superior_ids:
+                    superior_ids.remove(idx)
+                st.session_state.superior_ids = superior_ids
+                st.rerun()
 
         st.markdown("</div>", unsafe_allow_html=True)
 
