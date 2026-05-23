@@ -69,7 +69,7 @@ st.set_page_config(
     layout="centered",
 )
 
-# ====== 全体 CSS（スマホ向け＋ボタン用） ============
+# ====== 全体 CSS（スマホ向け＋小さめボタン用） ============
 st.markdown(
     """
     <style>
@@ -78,8 +78,8 @@ st.markdown(
     }
 
     .qual-card {
-        padding: 0.6rem 0.8rem;
-        margin-bottom: 0.4rem;
+        padding: 0.6rem 0.8rem 0.4rem;
+        margin-bottom: 0.3rem;
         border-radius: 0.4rem;
         border: 1px solid #e0e0e0;
         background-color: #ffffff;
@@ -101,21 +101,27 @@ st.markdown(
     .qual-meta {
         font-size: 0.9rem;
         line-height: 1.5;
+        margin-bottom: 0.2rem;
     }
 
-    /* ボタン：スマホでも2つが横並びになりやすいように小さめ＆幅auto */
+    /* ▼ 資格枠の中にボタンがあるように見せるためのラッパー */
+    .qual-card-btn-row {
+        margin-top: 0.1rem;      /* 資格情報との間を少しだけ空ける */
+    }
+
+    /* ▼ ボタンを今の「約半分」の大きさにする */
     .stButton > button {
         white-space: nowrap;
-        font-size: 0.8rem;
-        padding: 0.25rem 0.5rem;
-        background-color: #e3f2fd;   /* 薄い青色 */
+        font-size: 0.6rem;         /* 文字サイズをかなり小さく */
+        padding: 0.15rem 0.3rem;   /* 余白も少なく */
+        background-color: #e3f2fd;
         color: #0d47a1;
         border: 1px solid #90caf9;
-        border-radius: 0.35rem;
+        border-radius: 0.25rem;
 
-        width: auto;          /* カラム幅いっぱいにしない */
-        min-width: 0;         /* 極力小さくなることを許可 */
-        max-width: 100%;      /* はみ出さない */
+        width: auto;          /* カラム幅いっぱいには広げない */
+        min-width: 0;
+        max-width: 100%;
         box-sizing: border-box;
     }
     .stButton > button:hover {
@@ -132,7 +138,6 @@ st.markdown(
         font-size: 14px;
     }
 
-    /* タブ用チェックボックスのラベルを少し小さめに */
     .tab-toggle-label {
         font-size: 0.8rem;
         color: #555555;
@@ -225,7 +230,7 @@ st.sidebar.header("検索・フィルタ")
 st.sidebar.subheader("フリーワード検索")
 keyword_input = st.sidebar.text_input(
     "キーワード",
-    value=st.session_state.applied_keyword,  # 直近の適用条件を初期値に
+    value=st.session_state.applied_keyword,
     placeholder="例）IT パスポート, 技術士 など",
     key="kw_input"
 )
@@ -250,11 +255,10 @@ selected_kubun_input = st.sidebar.multiselect(
     key="kubun_multi",
 )
 
-# === 絞り込みボタン & 絞り込み解除ボタン（サイドタブの下） ===
+# === 絞り込みボタン & 絞り込み解除ボタン ===
 btn_col1, btn_col2 = st.sidebar.columns(2)
 with btn_col1:
     if st.button("絞り込み", key="do_filter_sidebar"):
-        # 現在の入力値を「適用済み条件」として保存
         st.session_state.applied_keyword = st.session_state.kw_input
         st.session_state.applied_ranks = st.session_state.rank_multi
         st.session_state.applied_kubun = st.session_state.kubun_multi
@@ -262,11 +266,9 @@ with btn_col1:
 
 with btn_col2:
     if st.button("絞り込み解除", key="clear_filter_sidebar"):
-        # 条件リセット
         st.session_state.applied_keyword = ""
         st.session_state.applied_ranks = []
         st.session_state.applied_kubun = []
-        # 入力欄もリセット
         st.session_state.kw_input = ""
         st.session_state.rank_multi = []
         st.session_state.kubun_multi = []
@@ -274,7 +276,7 @@ with btn_col2:
 
 st.sidebar.markdown("---")
 
-# === ログアウトボタン（絞り込みボタン群のさらに下） ===
+# === ログアウトボタン ===
 if st.session_state.authenticated:
     if st.sidebar.button("ログアウト", key="logout_sidebar"):
         reset_login_state(clear_data=False)
@@ -307,17 +309,14 @@ def filter_records(rec_list):
         rank_val = str(r.get("ランク", ""))
         kubun_val = str(r.get("区分", ""))
 
-        # ランク絞り込み（選択があるときのみ有効）
         if applied_ranks:
             if rank_val not in map(str, applied_ranks):
                 continue
 
-        # 区分絞り込み（選択があるときのみ有効）
         if applied_kubun:
             if kubun_val not in map(str, applied_kubun):
                 continue
 
-        # フリーワード
         if not match_freeword(r, applied_keyword):
             continue
 
@@ -347,19 +346,19 @@ if st.session_state.show_unacquired:
 
             card = st.container()
             with card:
-                # 資格名を黒太枠＋強調、ランク/区分/金額は1行ずつ
+                # ▼ 資格枠（情報部分）
                 st.markdown(
                     f'''
                     <div class="qual-card"><div class="qual-name-box"><span class="qual-name-text">{qual_name}</span></div><div class="qual-meta">
                             ランク: {rank}<br>
                             区分: {kubun}<br>
                             金額: {money}
-                        </div></div>
+                        </div><!-- この後のボタンを枠の中に見せるためのラッパー --><div class="qual-card-btn-row"></div></div>
                     ''',
                     unsafe_allow_html=True
                 )
 
-                # 取得 / 上位互換 ボタンを横並び
+                # ▼ 実際のボタン（見た目としては枠の中の下側に並ぶ）
                 btn_col1, btn_col2 = st.columns(2, gap="small")
                 with btn_col1:
                     if st.button("取得", key=f"acquire_{idx}"):
@@ -370,7 +369,7 @@ if st.session_state.show_unacquired:
                         st.session_state.superior_ids = superior_ids
                         st.rerun()
                 with btn_col2:
-                    if st.button("上位互換", key=f"acquire_superior_{idx}"):
+                    if st.button("上位互換取得", key=f"acquire_superior_{idx}"):
                         acquired_ids.add(idx)
                         superior_ids.add(idx)
                         st.session_state.acquired_ids = acquired_ids
@@ -403,7 +402,7 @@ if st.session_state.show_acquired:
                             ランク: {rank}<br>
                             区分: {kubun}<br>
                             金額: {money}
-                        </div></div>
+                        </div><div class="qual-card-btn-row"></div></div>
                     ''',
                     unsafe_allow_html=True
                 )
@@ -419,7 +418,7 @@ if st.session_state.show_acquired:
                         st.session_state.superior_ids = superior_ids
                         st.rerun()
                 with btn_col2:
-                    if st.button("上位互換に変更", key=f"set_superior_{idx}"):
+                    if st.button("上位互換取得に変更", key=f"set_superior_{idx}"):
                         acquired_ids.add(idx)
                         superior_ids.add(idx)
                         st.session_state.acquired_ids = acquired_ids
@@ -452,7 +451,7 @@ if st.session_state.show_superior:
                             ランク: {rank}<br>
                             区分: {kubun}<br>
                             金額: {money}
-                        </div></div>
+                        </div><div class="qual-card-btn-row"></div></div>
                     ''',
                     unsafe_allow_html=True
                 )
