@@ -50,19 +50,16 @@ def reset_login_state(clear_data: bool = False):
 st.set_page_config(
     page_title="資格報奨金 管理アプリ",
     page_icon="✅",
-    layout="centered",   # ← wide から centered に変更（スマホで見やすく）
+    layout="centered",
 )
 
 # ====== 全体 CSS（スマホ向け） =======================
 st.markdown(
     """
     <style>
-    /* ベース文字サイズ少し大きめ */
     html, body, [class*="css"]  {
         font-size: 16px;
     }
-
-    /* 資格カードの見た目調整 */
     .qual-card {
         padding: 0.6rem 0.8rem;
         margin-bottom: 0.4rem;
@@ -70,21 +67,15 @@ st.markdown(
         border: 1px solid #e0e0e0;
         background-color: #ffffff;
     }
-
-    /* ボタンを1行で表示（折り返さない） */
     .stButton > button {
         white-space: nowrap;
         font-size: 0.9rem;
         padding: 0.25rem 0.6rem;
     }
-
-    /* セクション見出しの余白調整 */
     h2, h3 {
         margin-top: 0.8rem;
         margin-bottom: 0.4rem;
     }
-
-    /* サイドバーの文字サイズ調整 */
     section[data-testid="stSidebar"] {
         font-size: 14px;
     }
@@ -153,28 +144,28 @@ for rec in records:
     else:
         remaining_records.append(rec)
  
-# ---- サイドバー（スマホでも触りやすいシンプル構成） ----
+# ---- サイドバー（検索UIを改良） ----
 st.sidebar.header("検索・フィルタ")
-st.sidebar.subheader("基本条件")
 
-selected_ranks = st.sidebar.multiselect(
-    "ランクで絞り込み",
-    options=rank_list,
-    default=rank_list,
-)
-selected_kubun = st.sidebar.multiselect(
-    "区分で絞り込み",
-    options=kubun_list,
-    default=kubun_list,
-)
-st.sidebar.markdown("---")
+# ① フリーワードを一番上に
 st.sidebar.subheader("フリーワード検索")
 keyword = st.sidebar.text_input(
-    "資格名・ランク・区分・金額 など",
+    "キーワード",
     value="",
     placeholder="例）IT パスポート, 技術士 など"
 )
-st.sidebar.caption("※ 大文字／小文字は区別しません。部分一致です。")
+st.sidebar.caption("※ 資格名・ランク・区分・金額から部分一致で検索します。")
+
+st.sidebar.markdown("---")
+
+# ② ランク／区分は「タブから選ぶ方式」（プルダウン）
+st.sidebar.subheader("詳細条件")
+
+rank_options = ["指定なし"] + rank_list
+selected_rank = st.sidebar.selectbox("ランクを選択", options=rank_options, index=0)
+
+kubun_options = ["指定なし"] + kubun_list
+selected_kubun = st.sidebar.selectbox("区分を選択", options=kubun_options, index=0)
  
  
 def match_freeword(rec: dict, keyword: str) -> bool:
@@ -194,12 +185,20 @@ def match_freeword(rec: dict, keyword: str) -> bool:
 def filter_records(rec_list):
     filtered = []
     for r in rec_list:
-        if r.get("ランク") not in selected_ranks:
-            continue
-        if r.get("区分") not in selected_kubun:
-            continue
+        # ランク絞り込み（「指定なし」の場合はスキップ）
+        if selected_rank != "指定なし":
+            if str(r.get("ランク", "")) != str(selected_rank):
+                continue
+
+        # 区分絞り込み（「指定なし」の場合はスキップ）
+        if selected_kubun != "指定なし":
+            if str(r.get("区分", "")) != str(selected_kubun):
+                continue
+
+        # フリーワード
         if not match_freeword(r, keyword):
             continue
+
         filtered.append(r)
     return filtered
  
@@ -223,7 +222,6 @@ else:
         kubun = rec.get("区分", "")
         money = rec.get("金額", "")
  
-        # スマホでも見やすいように 2 カラム構成に簡略化
         card = st.container()
         with card:
             st.markdown(
@@ -243,7 +241,6 @@ else:
                     st.session_state.superior_ids = superior_ids
                     st.rerun()
             with btn_col2:
-                # ★ 文言を短く「上位互換」に変更（2行になりにくくする）
                 if st.button("上位互換", key=f"acquire_superior_{idx}", use_container_width=True):
                     acquired_ids.add(idx)
                     superior_ids.add(idx)
@@ -288,7 +285,6 @@ else:
                     st.session_state.superior_ids = superior_ids
                     st.rerun()
             with btn_col2:
-                # ここもラベル短めに
                 if st.button("上位互換に変更", key=f"set_superior_{idx}", use_container_width=True):
                     acquired_ids.add(idx)
                     superior_ids.add(idx)
