@@ -122,8 +122,8 @@ st.markdown(
     /* ▼ ボタンのデザイン（かなり薄い青 + 小さめサイズ＆同じ幅） */
     .stButton > button {
         white-space: nowrap;
-        font-size: 0.4rem;          /* 文字小さめ */
-        padding: 0051rem 0.1rem;     /* 余白少なめ */
+        font-size: 0.3rem;          /* 文字小さめ */
+        padding: 0.05rem 0.1rem;     /* 余白少なめ */
         background-color: #e8f4ff;   /* かなり薄い青 */
         color: #0d47a1;
         border: 1px solid #bcdfff;
