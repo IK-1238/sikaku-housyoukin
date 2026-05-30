@@ -2,14 +2,31 @@ import streamlit as st
 import pandas as pd
 import json
 import os
+import sys
 import streamlit.components.v1 as components  # ★ 追加
 
 
-# ==== 設定 ============================================
-EXCEL_PATH = "資格報奨金_まとめ.xlsx"
+# ==== ベースディレクトリの決定（スクリプトと同じ場所） ======================
+def get_base_dir():
+    """
+    実行ファイル(.exe)化している場合も含めて、
+    このスクリプト（または実行ファイル）が存在するディレクトリを返す。
+    """
+    if getattr(sys, 'frozen', False):
+        # PyInstaller等でEXE化されている場合
+        return os.path.dirname(sys.executable)
+    else:
+        # 通常のスクリプト実行の場合
+        return os.path.dirname(os.path.abspath(__file__))
+
+
+BASE_DIR = get_base_dir()
+
+# ==== 設定 ==========================================================
+EXCEL_PATH = os.path.join(BASE_DIR, "資格報奨金_まとめ.xlsx")
 PASSWORD = "SIyu0207ike&"
-STATE_PATH = "qual_state.json"   # 取得状況を保存するファイル
-# =====================================================
+STATE_PATH = os.path.join(BASE_DIR, "qual_state.json")   # 取得状況を保存するファイル
+# ====================================================================
 
 
 def parse_money_to_man(yen_str: str) -> int:
